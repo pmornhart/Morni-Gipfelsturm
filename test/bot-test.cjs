@@ -203,6 +203,79 @@ async function jumpTo(bot, from, to, sprint) {
   return false;
 }
 
+/** Netzwerk-Teil (nur mit Fake-Netzwerk): Statistik, Zustand, Sprache wechseln, Party-Rennen. */
+async function network(bot, calls) {
+  await wait(1000);
+  const log = fs.readFileSync(calls, 'utf8');
+  const lines = log.split('\n').filter((l) => l.includes(NAME) || l.startsWith('state'));
+  check('Statistik: Versuch gemeldet (add attempts=1, ohne Bestwert)',
+    lines.some((l) => l.includes('add={attempts=1} best={} lower=true')), lines.find((l) => l.includes('attempts')));
+  const counters = lines.find((l) => l.includes('finishes_almwiese=1'));
+  check('Statistik: Zähler im Ziel (finishes, finishes_almwiese, falls) ohne Bestwert',
+    counters && counters.includes('finishes=1') && counters.includes('falls=1') && counters.includes('best={}'), counters);
+  const time = lines.find((l) => l.includes('time_almwiese_ms='));
+  check('Statistik: Bestzeit getrennt gemeldet (time_almwiese_ms, kleiner ist besser)',
+    time && time.includes('add={}') && time.includes('lower=true'), time);
+  check('Statistik: Übungs- und zu schnelle Läufe ohne Zeit', lines.filter((l) => l.includes('time_almwiese_ms=')).length === 1);
+  check('Zustand gemeldet: state gipfelsturm open <spieler>', log.split('\n').some((l) => /^state gipfelsturm open [12]$/.test(l)),
+    log.split('\n').filter((l) => l.startsWith('state')).slice(-1)[0]);
+
+  // Sprache wechseln (wie /sprache im Netzwerk): Leiste kommt in der neuen Sprache
+  await rcon(`fakenet lang ${NAME} de`);
+  await wait(2000);
+  const de = plain(bot.inventory.slots[36]?.customName);
+  await rcon(`fakenet lang ${NAME} en`);
+  await wait(2000);
+  const en = plain(bot.inventory.slots[36]?.customName);
+  check('Sprache wechselt live (Leiste Deutsch ↔ Englisch)', /Wanderkarte/.test(de) && /Trail map/.test(en), `${de} / ${en}`);
+
+  // Party-Rennen: zweiter Test-Spieler, der Anführer startet, der Freund macht mit
+  const FRIEND = 'Gipfelfreund';
+  await rcon(`fakenet lang ${FRIEND} de`, `fakenet party ${NAME} ${FRIEND}`);
+  const friend = makeBot(FRIEND);
+  await spawned(friend);
+  bot.chats.length = 0;
+  bot.titles.length = 0;
+  friend.chats.length = 0;
+  friend.titles.length = 0;
+  bot.chat('/gipfel start almwiese');
+  await wait(2500);
+  check('Rennen: Freund bekommt die Einladung', said(friend, /startet ein Rennen/) && friend.inventory.slots[36 + 4]?.name === 'firework_rocket',
+    friend.chats.filter((c) => /Rennen/.test(c))[0]);
+  check('Rennen: Anführer wartet auf die Party', said(bot, /Waiting for your party/), bot.chats.filter((c) => /party/i.test(c))[0]);
+  friend.chat('/gipfel mitmachen');
+  await wait(1500);
+  check('Rennen: Freund ist dabei (am Start)', said(bot, /joined/) && Math.abs(friend.entity.position.x - 501.5) < 1.2,
+    `${friend.entity.position}`);
+  // Countdown 3-2-1 und Startschuss
+  await wait(4500);
+  check('Rennen: Countdown und „Los!“', bot.titles.some((t) => /^Go!$/.test(t.trim())) && friend.titles.some((t) => /Los!/.test(t)),
+    `${bot.titles.join(',')} | ${friend.titles.join(',')}`);
+  // Die Uhr läuft für beide, auch ohne Bewegung
+  friend.bars.length = 0;
+  await wait(1200);
+  const raceBar = friend.bars.filter((b) => b.includes('⏱')).pop() || '';
+  const raceMs = (raceBar.match(/⏱ (\d+):(\d\d)[,.](\d{3})/) || []).slice(1).map(Number);
+  check('Rennen: Zeit läuft für alle ab dem Startschuss (auch ohne Bewegung)', raceMs.length === 3 && raceMs[1] >= 1, raceBar);
+  const padsJson = (await rcon('gipfel pads almwiese'))[0];
+  const course = JSON.parse(padsJson.slice(padsJson.indexOf('{')));
+  for (const cp of course.pads.filter((p) => p.role === 'CHECKPOINT')) {
+    await wait(2600);
+    await tp(NAME, center(cp).x, cp.s, center(cp).z);
+  }
+  await wait(2600);
+  const fin = course.pads[course.pads.length - 1];
+  await tp(NAME, center(fin).x, fin.s + 0.5, center(fin).z);
+  await wait(1500);
+  check('Rennen: Platz 1 wird allen gemeldet', said(friend, new RegExp(`Rennen: ${NAME} ist im Ziel .*Platz 1`)),
+    friend.chats.filter((c) => /Rennen/.test(c)).pop());
+  friend.chat('/gipfel aufgeben');
+  await wait(1500);
+  check('Rennen vorbei: Sieger steht fest', said(bot, new RegExp(`Race over! Winner: ${NAME}`)), bot.chats.filter((c) => /Race/.test(c)).pop());
+  friend.quit();
+  await wait(1000);
+}
+
 async function main() {
   const uuid = offlineUuid(NAME);
   // Saubere Ausgangslage: alte Zeiten dieses Test-Spielers löschen
@@ -214,11 +287,14 @@ async function main() {
   const start = pads[0];
   const finish = pads[pads.length - 1];
 
+  const calls = path.join(SERVER_DIR, 'plugins', 'MoinMorni', 'calls.log');
+  if (NETWORK) {
+    // Fake-Netzwerk: Englisch für den Test-Spieler, Aufruf-Protokoll leeren
+    if (fs.existsSync(calls)) fs.writeFileSync(calls, '');
+    await rcon('fakenet clear', `fakenet lang ${NAME} en`);
+  }
   const bot = makeBot(NAME);
   await spawned(bot);
-  if (NETWORK) {
-    await wait(2500); // Sprache kommt vom „Netzwerk“
-  }
 
   // ---------- Basislager ----------
   const pos = bot.entity.position;
@@ -340,15 +416,16 @@ async function main() {
   bot.chats.length = 0;
   bot.chat('/gipfel top almwiese');
   await wait(1500);
-  check('/gipfel top almwiese zeigt den Test-Spieler auf Platz 1', bot.chats.some((c) => c.includes(`1. ${NAME}`)),
-    bot.chats.slice(0, 3).join(' | '));
+  const topLine = bot.chats.find((c) => new RegExp(`\\d+\\. ${NAME} · \\d+:\\d\\d[,.]\\d{3}`).test(c));
+  check('/gipfel top almwiese zeigt den Test-Spieler mit Platz und Zeit', !!topLine, topLine || bot.chats.slice(0, 3).join(' | '));
   const book = await openWith(bot, 2);
   if (book) {
     await bot.clickWindow(10, 0, 0);
     await wait(1200);
     const topWin = bot.currentWindow;
-    const first = topWin?.slots?.[4];
-    check('Gipfelbuch → Bestenliste: #1 ist der Test-Spieler', first && label(first).includes(NAME), label(first));
+    const entries = [4, 12, 13, 14, 20, 21, 22, 23, 24, 31].map((i) => label(topWin?.slots?.[i])).filter(Boolean);
+    const mine = entries.find((e) => new RegExp(`#\\d+ ${NAME}`).test(e));
+    check('Gipfelbuch → Bestenliste der Strecke enthält den Test-Spieler', !!mine, mine || entries.join(', '));
     bot.closeWindow(topWin || book);
   } else {
     check('Gipfelbuch öffnet sich', false);
@@ -429,13 +506,21 @@ async function main() {
   await wait(800);
   check('Kein Schaden', bot.health >= 20, String(bot.health));
 
+  if (NETWORK) {
+    await network(bot, calls);
+  }
+
   // ---------- Lobby ----------
+  bot.chat('/gipfel basislager');
+  await wait(1500);
   bot.setQuickBarSlot(8);
   await wait(300);
   bot.activateItem();
   await wait(2500);
   if (NETWORK) {
-    check('Lobby-Gegenstand → Netzwerk „toLobby“', true);
+    const log = fs.readFileSync(calls, 'utf8');
+    check('Lobby-Gegenstand → Netzwerk „toLobby“', log.includes(`toLobby ${NAME}`) && /in die Lobby/.test(bot.kickReason || ''),
+      bot.kickReason);
   } else {
     check('Lobby ohne Netzwerk: freundlicher Kick', /Danke fürs Klettern|Thanks for climbing/.test(bot.kickReason || ''),
       bot.kickReason);

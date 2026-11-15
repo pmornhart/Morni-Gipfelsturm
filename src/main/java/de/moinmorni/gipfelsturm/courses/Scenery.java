@@ -177,6 +177,100 @@ public final class Scenery {
         }
     }
 
+    /**
+     * Felsmassiv (Kletterwand): oben zackig, unten spitz zulaufend wie eine schwebende Insel; Fels in Schichten mit
+     * Tuff und Andesit, oben etwas Schnee und Moos.
+     */
+    public static void massif(Plan p, int x0, int z0, int x1, int z1, int bottomY, int topY, long seed) {
+        SplittableRandom r = new SplittableRandom(seed);
+        double cx = (x0 + x1) / 2.0;
+        double cz = (z0 + z1) / 2.0;
+        double rx = (x1 - x0) / 2.0;
+        double rz = (z1 - z0) / 2.0;
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                double e = Math.pow((x - cx) / (rx + 0.5), 2) + Math.pow((z - cz) / (rz + 0.5), 2);
+                if (e > 1) {
+                    continue;
+                }
+                double rim = 1 - e;
+                int top = (int) Math.round(topY - (1 - rim) * 14 - r.nextInt(4) - Math.abs(Math.sin(x * 0.7 + z * 0.4)) * 5);
+                int bottom = (int) Math.round(bottomY + (1 - rim) * (topY - bottomY) * 0.45);
+                for (int y = bottom; y <= top; y++) {
+                    Blk b;
+                    if (y == top) {
+                        b = y > topY - 9 ? SNOW : (r.nextInt(3) == 0 ? Blk.full("moss_block") : STONE);
+                    } else {
+                        int layer = Math.floorMod(y + (x + z) / 3, 7);
+                        b = layer == 0 ? TUFF : layer == 3 ? ANDESITE : (r.nextInt(9) == 0 ? Blk.full("cobblestone") : STONE);
+                    }
+                    p.decorate(x, y, z, b);
+                }
+            }
+        }
+    }
+
+    /**
+     * Wetterturm: runder Turm aus Steinziegeln mit Fensterbändern, Umlauf mit Geländer und spitzem Dach, oben
+     * Blitzableiter und Windmesser, unten ein Felsfuß.
+     */
+    public static void tower(Plan p, int cx, int cz, int baseY, int topY, long seed) {
+        int radius = 4;
+        Blk wall = Blk.full("stone_bricks");
+        Blk band = Blk.full("polished_andesite");
+        for (int y = baseY; y <= topY; y++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    double d = Math.hypot(dx, dz);
+                    if (d > radius + 0.4 || d < radius - 0.7) {
+                        continue;
+                    }
+                    boolean window = Math.floorMod(y - baseY, 8) == 4 && (dx == 0 || dz == 0);
+                    Blk b = window ? Blk.deco("glass_pane") : (Math.floorMod(y - baseY, 8) == 0 ? band : wall);
+                    p.decorate(cx + dx, y, cz + dz, b);
+                }
+            }
+        }
+        // Umlauf mit Geländer
+        for (int dx = -radius - 2; dx <= radius + 2; dx++) {
+            for (int dz = -radius - 2; dz <= radius + 2; dz++) {
+                double d = Math.hypot(dx, dz);
+                if (d <= radius + 2.4) {
+                    p.decorate(cx + dx, topY + 1, cz + dz, Blk.full("spruce_planks"));
+                }
+                if (d > radius + 1.5 && d <= radius + 2.4) {
+                    p.decorate(cx + dx, topY + 2, cz + dz, Blk.fence("spruce_fence"));
+                }
+            }
+        }
+        // Spitzdach
+        for (int k = 0; k <= radius + 1; k++) {
+            int rr = radius + 1 - k;
+            for (int dx = -rr; dx <= rr; dx++) {
+                for (int dz = -rr; dz <= rr; dz++) {
+                    if (Math.hypot(dx, dz) <= rr + 0.3) {
+                        p.decorate(cx + dx, topY + 6 + k, cz + dz, Blk.full("dark_oak_planks"));
+                    }
+                }
+            }
+        }
+        for (int k = 2; k <= 5; k++) {
+            for (int[] c : new int[][] {{-radius + 1, 0}, {radius - 1, 0}, {0, -radius + 1}, {0, radius - 1}}) {
+                p.decorate(cx + c[0], topY + k, cz + c[1], Blk.full("spruce_log", "axis=y"));
+            }
+        }
+        int tip = topY + 6 + radius + 2;
+        for (int k = 0; k < 4; k++) {
+            p.decorate(cx, tip + k, cz, Blk.bars());
+        }
+        p.decorate(cx, tip + 4, cz, Blk.deco("lightning_rod"));
+        p.decorate(cx + 1, tip + 2, cz, Blk.deco("end_rod[facing=east]"));
+        p.decorate(cx - 1, tip + 2, cz, Blk.deco("end_rod[facing=west]"));
+        p.decorate(cx, tip + 2, cz + 1, Blk.deco("end_rod[facing=south]"));
+        // Felsfuß
+        rock(p, cx, baseY - 3, cz, radius + 3, STONE, ANDESITE, seed);
+    }
+
     /** Ein Blumentopf mit Pflanze. */
     public static Blk pot(String plant) {
         return Blk.deco("potted_" + plant);

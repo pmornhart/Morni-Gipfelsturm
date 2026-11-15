@@ -144,8 +144,8 @@ public final class Runs {
         teleport(p, r, pl.startLocation(c));
         pl.hotbar().run(p, r.practice);
         String l = pl.lang(p);
-        p.showTitle(Title.title(courseName(c, l), Texts.get(l, "run.welcome", Texts.comp("course", Component.empty()),
-                Texts.comp("diff", difficulty(c, l)), Texts.arg("n", c.checkpointCount())), LONG));
+        p.showTitle(Title.title(courseName(c, l), Texts.get(l, "run.sub", Texts.comp("diff", difficulty(c, l)),
+                Texts.arg("n", c.checkpointCount())), LONG));
         p.sendMessage(Texts.chat(l, "run.welcome", Texts.comp("course", courseName(c, l)),
                 Texts.comp("diff", difficulty(c, l)), Texts.arg("n", c.checkpointCount())));
         if (race != null) {
@@ -350,6 +350,11 @@ public final class Runs {
                     respawn(p, r, true, null);
                     return;
                 }
+                if (offCourse(p, r, x, y, z)) {
+                    respawn(p, r, true, null);
+                    p.sendMessage(Texts.chat(pl.lang(p), "run.offcourse"));
+                    return;
+                }
                 progress(p, r, ax, ay, az, x, y, z);
                 if (!runs.containsKey(p.getUniqueId())) {
                     return; // im Ziel
@@ -389,6 +394,29 @@ public final class Runs {
         if (f >= 0) {
             finish(p, r, f);
         }
+    }
+
+    /**
+     * Steht der Spieler auf etwas Festem, das nicht zur Strecke gehört (Felsen, Turm, Landschaft)? Nach einer Viertel-
+     * sekunde zählt das wie ein Sturz – Abkürzungen über die Landschaft gibt es nicht.
+     */
+    private boolean offCourse(Player p, Run r, double x, double y, double z) {
+        boolean standing = false;
+        boolean onPad = false;
+        int by = (int) Math.floor(y - 0.05);
+        for (double[] c : new double[][] {{-0.299, -0.299}, {0.299, -0.299}, {-0.299, 0.299}, {0.299, 0.299}}) {
+            int bx = (int) Math.floor(x + c[0]);
+            int bz = (int) Math.floor(z + c[1]);
+            org.bukkit.block.Block b = p.getWorld().getBlockAt(bx, by, bz);
+            if (!b.isPassable()) {
+                standing = true;
+                if (r.course.isPadCell(bx, by, bz)) {
+                    onPad = true;
+                }
+            }
+        }
+        r.offCourse = standing && !onPad ? r.offCourse + 1 : 0;
+        return r.offCourse >= 5;
     }
 
     private void startRun(Player p, Run r, double fraction) {
@@ -643,7 +671,7 @@ public final class Runs {
         }
         // Geist der Bestzeit: blaue Funken laufen den besten Weg mit
         if (r.ghost != null && r.state == Run.State.RUNNING) {
-            long i = (tick - r.clock.startTick()) * 3;
+            long i = (tick - r.clock.startTick() - 1) * 3;
             if (i >= 0 && i + 2 < r.ghost.length) {
                 double gx = r.ghost[(int) i];
                 double gy = r.ghost[(int) i + 1];

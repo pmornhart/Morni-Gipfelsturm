@@ -50,7 +50,7 @@ public final class Basecamp {
 
     /** Begrüßungs-Tafel über dem Eingang der Hütte. */
     public double[] hutSign() {
-        return new double[] {0.5, Y + 8.6, -16.2};
+        return new double[] {0.5, Y + 13.2, -15.4};
     }
 
     public List<Station> stations() {
@@ -112,12 +112,13 @@ public final class Basecamp {
                     continue;
                 }
                 Blk b;
-                if (d <= 5.5) {
-                    // Rauten (bayerisches Muster): Diagonale Felder abwechselnd weiß und hellblau.
-                    int u = Math.floorDiv(x + z, 2);
-                    int v = Math.floorDiv(x - z, 2);
+                if (d <= 6.5) {
+                    // Rauten (bayerisches Muster): ein um 45° gedrehtes Schachbrett in Weiß und Hellblau. Die Breite muss
+                    // ungerade sein – bei 2 hätten x+z und x−z dieselbe Parität, und es gäbe nur Streifen.
+                    int u = Math.floorDiv(x + z + 1, 3);
+                    int v = Math.floorDiv(x - z + 1, 3);
                     b = Math.floorMod(u + v, 2) == 0 ? Blk.WHITE : Blk.LIGHT_BLUE;
-                } else if (d <= 6.5) {
+                } else if (d <= 7.5) {
                     b = (Math.floorMod(x * 7 + z * 3, 9) == 0) ? emerald : gold;
                 } else if (d > PLAZA - 1) {
                     b = paving2;

@@ -37,6 +37,7 @@ public final class Course {
 
     private final List<Integer> checkpoints = new ArrayList<>();
     private final double[] fallY;
+    private final java.util.Set<Long> padCells = new java.util.HashSet<>();
 
     /** Fallgrenze: so weit unter dem tiefsten Pad eines Abschnitts beginnt das Zurücksetzen. */
     public static final double FALL_MARGIN = 3.0;
@@ -60,6 +61,11 @@ public final class Course {
         for (Pad p : pads) {
             if (p.role == Pad.Role.CHECKPOINT) {
                 checkpoints.add(p.index);
+            }
+            for (int x = p.x0; x <= p.x1; x++) {
+                for (int z = p.z0; z <= p.z1; z++) {
+                    padCells.add(Plan.key(x, p.y, z));
+                }
             }
         }
         // Abschnitt k: vom Checkpoint k (0 = Start) bis einschließlich zum nächsten Checkpoint bzw. Ziel.
@@ -135,6 +141,11 @@ public final class Course {
      */
     public long plausibleMs() {
         return Math.round(pathLength() / 12.0 * 1000);
+    }
+
+    /** Gehört der Block zu einem Pad der Strecke (Sprungblock, Start, Checkpoint, Ziel)? */
+    public boolean isPadCell(int x, int y, int z) {
+        return padCells.contains(Plan.key(x, y, z));
     }
 
     /** Medaille für eine Zeit (null = keine). */

@@ -38,6 +38,8 @@ final class Run {
     long splitShownUntil;
     net.kyori.adventure.text.Component splitText;
     long skipHintTick;
+    /** So viele Ticks steht der Spieler schon neben der Strecke (auf Felsen o. Ä.). */
+    int offCourse;
     /** Weg dieses Laufs (für den Geist, falls er Bestzeit wird). */
     private float[] path = new float[600];
     private int pathLen;

@@ -76,6 +76,7 @@ public final class Texts {
                 "<green>Go when you're ready</green> <gray>– the timer starts when you leave the emerald</gray>");
         t("run.go", "<green><bold>Los geht's!</bold></green>", "<green><bold>Go!</bold></green>");
         t("run.welcome", "<course> <gray>· <diff> · <n> Checkpoints</gray>", "<course> <gray>· <diff> · <n> checkpoints</gray>");
+        t("run.sub", "<diff> <gray>· <n> Checkpoints</gray>", "<diff> <gray>· <n> checkpoints</gray>");
         t("run.practice", "<light_purple>Übung</light_purple>", "<light_purple>Practice</light_purple>");
         t("run.checkpoint", "<gold>Checkpoint <n>/<total></gold> <white><time></white> <delta>",
                 "<gold>Checkpoint <n>/<total></gold> <white><time></white> <delta>");
@@ -89,6 +90,8 @@ public final class Texts {
                 "<light_purple>Back to your practice point</light_purple>");
         t("run.hazard", "<aqua>Platsch! <what> – zurück zum Checkpoint.</aqua>", "<aqua>Splash! <what> – back to the checkpoint.</aqua>");
         t("hazard.Wasser", "Eiskaltes Wasser", "Ice-cold water");
+        t("run.offcourse", "<yellow>Abkürzung? Auf der Strecke zählen nur die Sprungblöcke – zurück zum Checkpoint.</yellow>",
+                "<yellow>Shortcut? Only the jump blocks count on the course – back to the checkpoint.</yellow>");
         t("run.restart", "<green>Neustart!</green>", "<green>Restart!</green>");
         t("run.giveup", "Aufgegeben – zurück im <white>Basislager</white>. Nächstes Mal klappt's!",
                 "Gave up – back at <white>base camp</white>. You'll get it next time!");

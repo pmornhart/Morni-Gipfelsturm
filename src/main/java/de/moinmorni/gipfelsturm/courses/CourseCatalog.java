@@ -117,19 +117,26 @@ public final class CourseCatalog {
         b.finish(1, 0, 0, 3, 3);
         Course c = b.build();
 
-        // Landschaft: Almen unter der Strecke, ein Bach unter den Trittsteinen, Heustadel, Almhütte am Ziel.
+        // Landschaft: eine große Alm tief unter der Strecke (die Bäume bleiben unter den Sprüngen), ein Bach quer
+        // darüber, Heustadel, Almhütte am Ziel.
         long seed = 101;
+        double mx = 0;
+        double mz = 0;
         for (Pad p : c.pads) {
-            if (p.index % 4 == 1) {
-                Scenery.meadowIsland(plan, (int) p.centerX(), p.y - 9, (int) p.centerZ(), 5, seed + p.index);
-            }
+            mx += p.centerX();
+            mz += p.centerZ();
         }
-        int bachY = Math.min(bach0.y, bach1.y) - 7;
-        Scenery.meadowIsland(plan, (int) bach0.centerX(), bachY, (int) ((bach0.centerZ() + bach1.centerZ()) / 2), 8,
-                seed + 77);
-        for (int z = Math.min(bach0.z0, bach1.z0) - 9; z <= Math.max(bach0.z1, bach1.z1) + 9; z++) {
+        mx /= c.pads.size();
+        mz /= c.pads.size();
+        int almY = BASE_Y - 17;
+        Scenery.meadowIsland(plan, (int) mx, almY, (int) mz, 30, seed);
+        for (int z = (int) mz - 30; z <= (int) mz + 30; z++) {
+            int bx = (int) bach0.centerX() + (int) Math.round(Math.sin(z * 0.25) * 2);
             for (int dx = -1; dx <= 1; dx++) {
-                plan.set((int) bach0.centerX() + dx + (z % 3 == 0 ? 1 : 0), bachY, z, Blk.WATER);
+                if (plan.get(bx + dx, almY, z).solid()) {
+                    plan.set(bx + dx, almY, z, Blk.WATER);
+                    plan.remove(bx + dx, almY + 1, z);
+                }
             }
         }
         stadel(plan, stadel);
@@ -306,10 +313,25 @@ public final class CourseCatalog {
         b.finish(2, 0, 0, 3, 3);
         Course c = b.build();
         long seed = 303;
-        // Felswand hinter der Strecke (mit Abstand, damit sie keinen Sprung stört) und Felsen unten.
+        // Das Felsmassiv, um das die Strecke herumklettert (innen im „U“ der Strecke, Sprungwege bleiben frei).
+        int mx0 = Integer.MAX_VALUE;
+        int mx1 = Integer.MIN_VALUE;
+        int mz0 = Integer.MAX_VALUE;
+        int mz1 = Integer.MIN_VALUE;
         for (Pad p : c.pads) {
-            Scenery.rock(plan, (int) p.centerX(), p.y - 6, (int) p.centerZ() - 6, 4, Scenery.STONE, Scenery.ANDESITE,
-                    seed + p.index);
+            if (p.index > 6) {
+                mx0 = Math.min(mx0, p.x0);
+                mx1 = Math.max(mx1, p.x1);
+                mz0 = Math.min(mz0, p.z0);
+                mz1 = Math.max(mz1, p.z1);
+            }
+        }
+        Scenery.massif(plan, mx0 + 3, mz0 + 2, mx1 - 18, mz1 - 3, BASE_Y - 30, BASE_Y + 34, seed);
+        for (Pad p : c.pads) {
+            if (p.index % 3 == 0) {
+                Scenery.rock(plan, (int) p.centerX(), p.y - 7, (int) p.centerZ() + 6, 3, Scenery.STONE,
+                        Scenery.ANDESITE, seed + p.index);
+            }
         }
         Scenery.panorama(plan, (int) c.start().centerX() + 10, BASE_Y + 10, 0, 85, 9, seed);
         return c;
@@ -447,10 +469,18 @@ public final class CourseCatalog {
         gondola(plan, gondel2);
         pylon(plan, mast1);
         long seed = 505;
+        List<Pad> masts = new ArrayList<>();
+        masts.add(c.start());
         for (Pad p : c.pads) {
             if (p.role == Pad.Role.CHECKPOINT) {
                 pylon(plan, p);
+                masts.add(p);
             }
+        }
+        masts.add(c.finish());
+        // Tragseile hoch über der Strecke von Mast zu Mast
+        for (int i = 1; i < masts.size(); i++) {
+            cable(plan, masts.get(i - 1), masts.get(i));
         }
         Scenery.panorama(plan, (int) c.start().centerX() + 20, BASE_Y, 0, 90, 10, seed);
         for (int i = 0; i < 6; i++) {
@@ -473,6 +503,29 @@ public final class CourseCatalog {
                 }
                 plan.decorate(x, roof.y - 4, z, Blk.full("red_concrete"));
             }
+        }
+    }
+
+    /** Seil (Ketten) zwischen zwei Masten: je ein Seilmast neben dem Pad, oben das leicht durchhängende Seil. */
+    private static void cable(Plan plan, Pad a, Pad b) {
+        int[] pa = {(int) a.centerX(), a.y + 7, a.z1 + 2};
+        int[] pb = {(int) b.centerX(), b.y + 7, b.z1 + 2};
+        for (int[] m : new int[][] {pa, pb}) {
+            for (int y = m[1] - 6; y < m[1]; y++) {
+                plan.decorate(m[0], y, m[2], Blk.full("iron_block"));
+            }
+        }
+        int steps = Math.max(Math.abs(pb[0] - pa[0]), Math.abs(pb[2] - pa[2]));
+        boolean alongX = Math.abs(pb[0] - pa[0]) >= Math.abs(pb[2] - pa[2]);
+        Blk chain = new Blk("minecraft:iron_chain[axis=" + (alongX ? "x" : "z") + "]",
+                de.moinmorni.gipfelsturm.course.Shape.CHAIN, de.moinmorni.gipfelsturm.course.Surface.NORMAL);
+        for (int k = 0; k <= steps; k++) {
+            double t = steps == 0 ? 0 : (double) k / steps;
+            double sag = Math.sin(Math.PI * t) * Math.min(3, steps / 12.0);
+            int x = (int) Math.round(pa[0] + (pb[0] - pa[0]) * t);
+            int z = (int) Math.round(pa[2] + (pb[2] - pa[2]) * t);
+            int y = (int) Math.round(pa[1] + (pb[1] - pa[1]) * t - sag);
+            plan.decorate(x, y, z, chain);
         }
     }
 
@@ -751,6 +804,11 @@ public final class CourseCatalog {
         Pad fin = c.finish();
         weatherStation(plan, fin);
         long seed = 808;
+        // Der Wetterturm selbst steht in der Mitte der ersten Runde.
+        Pad cp1 = c.checkpoints().get(0);
+        Pad cp2 = c.checkpoints().get(1);
+        Scenery.tower(plan, (cp1.x0 + c.start().x0) / 2 + 10, (cp2.z0 + c.start().z0) / 2, BASE_Y - 20, BASE_Y + 34,
+                seed);
         for (Pad p : c.pads) {
             if (p.index % 6 == 3) {
                 Scenery.rock(plan, (int) p.centerX() + 7, p.y - 14, (int) p.centerZ() + 7, 4, Scenery.STONE,

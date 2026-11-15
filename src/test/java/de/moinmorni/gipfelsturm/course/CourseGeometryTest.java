@@ -50,6 +50,38 @@ class CourseGeometryTest {
     }
 
     @Test
+    void noSceneryBridgesAGap() {
+        // In jeder Lücke zwischen zwei Pads darf bis 3 Blöcke unter Pad-Höhe nichts Festes liegen, auf dem man
+        // laufen könnte (außer der Neo-Wand) – sonst wäre die Lücke keine Lücke.
+        StringBuilder found = new StringBuilder();
+        for (Course c : WORLD.courses()) {
+            for (int i = 1; i < c.pads.size(); i++) {
+                Pad a = c.pads.get(i - 1);
+                Pad b = c.pads.get(i);
+                java.util.Set<Long> wall = new HashSet<>();
+                b.arrival.wall().forEach(w -> wall.add(Plan.key((int) w[0], (int) w[1], (int) w[2])));
+                for (int x = Math.min(a.x0, b.x0); x <= Math.max(a.x1, b.x1); x++) {
+                    for (int z = Math.min(a.z0, b.z0); z <= Math.max(a.z1, b.z1); z++) {
+                        if (a.covers(x, z) || b.covers(x, z)) {
+                            continue;
+                        }
+                        for (int y = Math.min(a.y, b.y) - 3; y <= Math.max(a.y, b.y); y++) {
+                            Blk blk = WORLD.plan().get(x, y, z);
+                            if (blk.solid() && !wall.contains(Plan.key(x, y, z)) && !c.isPadCell(x, y, z)
+                                    && b.arrival.kind() != Pad.Kind.LADDER) {
+                                found.append(c.id).append(" zwischen Pad ").append(a.index).append(" und ")
+                                        .append(b.index).append(": ").append(blk.id()).append(" bei ").append(x)
+                                        .append(' ').append(y).append(' ').append(z).append('\n');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertEquals("", found.toString());
+    }
+
+    @Test
     void checkpointsAndFallLines() {
         for (Course c : WORLD.courses()) {
             assertTrue(c.checkpointCount() >= 3 && c.checkpointCount() <= 8, c.id);

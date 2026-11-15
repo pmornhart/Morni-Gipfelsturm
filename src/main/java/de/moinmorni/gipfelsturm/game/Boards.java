@@ -30,12 +30,12 @@ public final class Boards {
         Basecamp camp = pl.model().basecamp();
         for (Basecamp.Station s : camp.stations()) {
             pl.model().course(s.course()).ifPresent(c ->
-                    h.text("board:" + c.id, s.boardX(), s.boardY(), s.boardZ(), l -> station(c, l), true, 0.55f));
+                    h.text("board:" + c.id, s.boardX(), s.boardY(), s.boardZ(), l -> station(c, l), true, 0.75f));
         }
         double[] w = camp.weeklyBoard();
         h.text("weekly", w[0], w[1], w[2], this::weekly, true, 0.75f);
         double[] hut = camp.hutSign();
-        h.text("hut", hut[0], hut[1], hut[2], l -> Texts.get(l, "board.hut"), true, 0.8f);
+        h.text("hut", hut[0], hut[1], hut[2], l -> Texts.get(l, "board.hut"), true, 1.1f);
         for (Course c : pl.model().courses()) {
             Pad start = c.start();
             h.text("start:" + c.id, start.centerX(), start.surface() + 2.4, start.centerZ(), l -> startLabel(c, l), true, 0.7f);

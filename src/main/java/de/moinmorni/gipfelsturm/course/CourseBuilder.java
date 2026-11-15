@@ -307,32 +307,40 @@ public final class CourseBuilder {
         return Math.round(s * 1000);
     }
 
-    /** Sprungwege und Stehplatz freihalten, damit Landschaft nichts verstellt. */
+    /**
+     * Sprungwege und Stehplatz freihalten, damit Landschaft nichts verstellt: über und rings um jeden Pad und in jeder
+     * Lücke bis 3 Blöcke unter Pad-Höhe – so kann Landschaft weder eine Lücke überbrücken noch einen Pad verbreitern.
+     * Nur die Spalten direkt unter den Pads bleiben frei für Säulen und Felsen.
+     */
     private void reservePath() {
-        for (int i = 0; i < pads.size(); i++) {
-            Pad p = pads.get(i);
-            for (int x = p.x0 - 1; x <= p.x1 + 1; x++) {
-                for (int z = p.z0 - 1; z <= p.z1 + 1; z++) {
-                    for (int yy = p.y + 1; yy <= p.y + 4; yy++) {
-                        plan.reserve(x, yy, z);
-                    }
+        java.util.Set<Long> padColumns = new java.util.HashSet<>();
+        for (Pad p : pads) {
+            for (int x = p.x0; x <= p.x1; x++) {
+                for (int z = p.z0; z <= p.z1; z++) {
+                    padColumns.add(((long) x << 32) | (z & 0xFFFFFFFFL));
                 }
             }
-            if (i == 0) {
-                continue;
+        }
+        for (int i = 0; i < pads.size(); i++) {
+            Pad p = pads.get(i);
+            reserveBox(p.x0 - 1, p.z0 - 1, p.x1 + 1, p.z1 + 1, p.y - 3, p.y + 4, p, padColumns);
+            if (i > 0) {
+                Pad a = pads.get(i - 1);
+                reserveBox(Math.min(a.x0, p.x0) - 1, Math.min(a.z0, p.z0) - 1, Math.max(a.x1, p.x1) + 1,
+                        Math.max(a.z1, p.z1) + 1, Math.min(a.y, p.y) - 3, Math.max(a.y, p.y) + 4, p, padColumns);
             }
-            Pad a = pads.get(i - 1);
-            int x0 = Math.min(a.x0, p.x0) - 1;
-            int x1 = Math.max(a.x1, p.x1) + 1;
-            int z0 = Math.min(a.z0, p.z0) - 1;
-            int z1 = Math.max(a.z1, p.z1) + 1;
-            int y0 = Math.min(a.y, p.y) + 1;
-            int y1 = Math.max(a.y, p.y) + 4;
-            for (int x = x0; x <= x1; x++) {
-                for (int z = z0; z <= z1; z++) {
-                    for (int yy = y0; yy <= y1; yy++) {
-                        plan.reserve(x, yy, z);
+        }
+    }
+
+    private void reserveBox(int x0, int z0, int x1, int z1, int y0, int y1, Pad p, java.util.Set<Long> padColumns) {
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                boolean column = padColumns.contains(((long) x << 32) | (z & 0xFFFFFFFFL));
+                for (int yy = y0; yy <= y1; yy++) {
+                    if (column && yy <= p.y) {
+                        continue;
                     }
+                    plan.reserve(x, yy, z);
                 }
             }
         }
