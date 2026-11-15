@@ -1,0 +1,18 @@
+name: Gipfelsturm
+version: '${project.version}'
+main: de.moinmorni.gipfelsturm.GipfelsturmPlugin
+api-version: '1.21'
+description: Parkour-Strecken von leicht bis extrem, mit Bestzeiten und Strecke der Woche (MoinMorni).
+authors: [MoinMorni]
+website: https://moinmorni.net
+# Läuft im MoinMorni-Netzwerk (Sprache, Party, Statistik) und auch ganz allein.
+softdepend: [MoinMorni]
+commands:
+  gipfel:
+    description: Gipfelsturm – Strecke wählen, Bestenliste, Statistik, Übungsmodus
+    usage: /gipfel [start|top|stats|woche|uebung|geist|verstecken|checkpoint|neustart|aufgeben|basislager|mitmachen|lobby]
+    aliases: [gs, gipfelsturm, summit]
+permissions:
+  gipfelsturm.admin:
+    description: Zeiten löschen, Welt neu bauen, im Kreativmodus bauen
+    default: op

@@ -1,0 +1,14 @@
+# Bauen
+target/
+*.class
+
+# Editoren
+.idea/
+*.iml
+.vscode/
+
+# Test-Server und Hilfsdateien (nie ins Repo)
+test/server/
+test/node_modules/
+*.log
+.rcon-pass
