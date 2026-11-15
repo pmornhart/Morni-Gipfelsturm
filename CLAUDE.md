@@ -1,5 +1,7 @@
 # Gipfelsturm (Morni-Gipfelsturm)
 
+@STAND.md
+
 Parkour-Modus des MoinMorni-Netzwerks (Paper-Plugin, Java 25, Paper 26.x). Baut seine eigene Welt aus dem Code
 (Basislager + 8 Strecken), läuft im Netzwerk und auch ganz allein.
 
@@ -23,6 +25,7 @@ Parkour-Modus des MoinMorni-Netzwerks (Paper-Plugin, Java 25, Paper 26.x). Baut 
 - Neue Version = `<version>` in `pom.xml` erhöhen und `docs/releases/v<version>.md` anlegen; der Workflow baut bei
   jedem Push und legt auf `main` das Release `v<version>` mit `Morni-Gipfelsturm.jar` an (MoinMorni spielt es auf).
 - Vor jeder Veröffentlichung (Merge nach `main`) Philips Go abwarten.
+- `STAND.md` nach jedem größeren Schritt aktualisieren.
 - Nach sichtbaren Änderungen im Spiel echt testen (`test/bot-test.cjs` gegen einen lokalen Paper-Server) und Bilder
   machen – Bilder mit echten Spiel-Texturen nur lokal, nie ins Repo.
 

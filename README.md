@@ -89,6 +89,9 @@ prüfen), `/gipfel pads <strecke>` (Lage aller Pads als JSON). Admins im Kreativ
 | `rennen-wartezeit` | `15` | Sekunden zum Mitmachen beim Party-Rennen |
 | `geist-standard` | `true` | Geist für neue Spieler an |
 
+Nur für Tests: `-Dgipfelsturm.uhr-versatz=<ms>` beim Start verstellt die Uhr der Strecke der Woche (um den Wechsel am
+Montag zu prüfen).
+
 Die Welt entsteht direkt aus dem Bauplan, Chunk für Chunk, sobald jemand hinkommt. Ändert eine neue Version die
 Strecken, wird die Welt beim Start gelöscht und neu erzeugt (Spieler bauen dort nichts). Spielerdaten liegen unter
 `plugins/Gipfelsturm/spieler/<uuid>.yml`, die Wege der Bestzeiten unter `geister/`.
@@ -139,7 +142,8 @@ mvn test             # nur die Unit-Tests
 `test/bot-test.cjs` spielt Gipfelsturm mit einem Test-Spieler ([mineflayer](https://github.com/PrismarineJS/mineflayer))
 auf einem lokalen Paper-Server: Basislager, Wanderkarte, Almwiesen-Lauf mit echten Sprüngen bis zum ersten Checkpoint,
 weitere Checkpoints per Teleport, Sturz, Ziel, gespeicherte Bestzeit, Bestenliste (Befehl und Menü), Übungsmodus,
-Schutz vor unmöglichen Zeiten, Statistik, Strecke der Woche, Mitspieler ausblenden, kein Schaden, Lobby.
+Schutz vor unmöglichen Zeiten, Zwischenzeiten gegen die Bestzeit, Medaillen, Tafeln im Basislager, Statistik, Strecke
+der Woche mit Abzeichen, Mitspieler ausblenden, kein Schaden, Lobby.
 
 1. Paper **26.1.2** (mineflayer kann bis 26.1) mit Java 25, `online-mode=false`, `enable-rcon=true`,
    `white-list=false`; `target/Morni-Gipfelsturm.jar` nach `plugins/`.
@@ -150,7 +154,8 @@ NODE_PATH=<ordner>/node_modules node test/bot-test.cjs 127.0.0.1 <port> 127.0.0.
 ```
 
 Mit dem Fake-Netzwerk aus `test/fake-network/` zusätzlich Englisch, Statistik/Zustand ans „Netzwerk“ und ein
-Party-Rennen mit zwei Test-Spielern (`--network`), siehe `test/README.md`.
+Party-Rennen mit zwei Test-Spielern (`--network`). `test/course-test.cjs` läuft alle acht Strecken Pad für Pad mit
+echten Sprüngen, Leitern und Schleim ab. Mehr in `test/README.md`.
 
 ---
 

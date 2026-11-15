@@ -408,7 +408,8 @@ public final class Runs {
             int bx = (int) Math.floor(x + c[0]);
             int bz = (int) Math.floor(z + c[1]);
             org.bukkit.block.Block b = p.getWorld().getBlockAt(bx, by, bz);
-            if (!b.isPassable()) {
+            // Leitern (und Ranken) gehören zum Weg: wer klettert, ist nicht „neben der Strecke“
+            if (!b.isPassable() && !org.bukkit.Tag.CLIMBABLE.isTagged(b.getType())) {
                 standing = true;
                 if (r.course.isPadCell(bx, by, bz)) {
                     onPad = true;

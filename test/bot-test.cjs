@@ -24,6 +24,7 @@ const [HOST = '127.0.0.1', PORT = '25730', RCON = '127.0.0.1:25731', PASS_FILE =
 const PASS = fs.readFileSync(PASS_FILE, 'utf8').trim();
 const NAME = NETWORK ? 'Gipfelnetz' : 'Gipfeltest';
 const VERSION = process.env.MC_VERSION || '26.1';
+let weeklyId = null;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
@@ -142,7 +143,9 @@ function makeBot(name) {
   bot.bars = [];
   bot.titles = [];
   bot.kickReason = null;
+  bot.raw = [];
   bot.on('messagestr', (m, pos) => (pos === 'game_info' ? bot.bars : bot.chats).push(m));
+  bot.on('message', (m, pos) => pos !== 'game_info' && bot.raw.push(JSON.stringify(m.json)));
   bot.on('actionBar', (m) => bot.bars.push(plain(m)));
   bot.on('title', (t) => bot.titles.push(plain(t)));
   bot._client.on('system_chat', (p) => {
@@ -216,7 +219,8 @@ async function network(bot, calls) {
   const time = lines.find((l) => l.includes('time_almwiese_ms='));
   check('Statistik: Bestzeit getrennt gemeldet (time_almwiese_ms, kleiner ist besser)',
     time && time.includes('add={}') && time.includes('lower=true'), time);
-  check('Statistik: Übungs- und zu schnelle Läufe ohne Zeit', lines.filter((l) => l.includes('time_almwiese_ms=')).length === 1);
+  const timed = 3 + (weeklyId === 'almwiese' ? 1 : 0);
+  check(`Statistik: jede gewertete Zeit gemeldet (${timed}), Übungs- und zu schnelle Läufe ohne Zeit`, lines.filter((l) => l.includes('time_almwiese_ms=')).length === timed);
   check('Zustand gemeldet: state gipfelsturm open <spieler>', log.split('\n').some((l) => /^state gipfelsturm open [12]$/.test(l)),
     log.split('\n').filter((l) => l.startsWith('state')).slice(-1)[0]);
 
@@ -279,7 +283,8 @@ async function network(bot, calls) {
 async function main() {
   const uuid = offlineUuid(NAME);
   // Saubere Ausgangslage: alte Zeiten dieses Test-Spielers löschen
-  await rcon(`gipfel reset ${NAME}`).catch(() => {});
+  // alle Test-Spieler (auch aus dem anderen Durchlauf), sonst stehen sie auf der Wochen-Bestenliste vor uns
+  await rcon('gipfel reset Gipfeltest', 'gipfel reset Gipfelnetz', 'gipfel reset Gipfelfreund').catch(() => {});
   const padsJson = (await rcon('gipfel pads almwiese'))[0];
   const course = JSON.parse(padsJson.slice(padsJson.indexOf('{')));
   const pads = course.pads;
@@ -500,6 +505,89 @@ async function main() {
     bot.inventory.slots[36 + 7]?.name);
   bot.activateItem();
   await wait(800);
+
+  // ---------- Zwischenzeiten gegen die Bestzeit: schneller (grün, neue Bestzeit), dann langsamer (rot) ----------
+  /** Lauf per Teleport über alle Checkpoints ins Ziel, mit Pause pro Abschnitt (Zeit soll glaubhaft sein). */
+  async function teleportRun(c, pause) {
+    bot.chats.length = 0;
+    bot.raw.length = 0;
+    bot.titles.length = 0;
+    bot.chat(`/gipfel start ${c.id}`);
+    await wait(1500);
+    const ps = c.pads;
+    await tp(NAME, center(ps[1]).x, ps[1].s, center(ps[1]).z);
+    for (const cp of ps.filter((p) => p.role === 'CHECKPOINT')) {
+      await wait(pause);
+      await tp(NAME, center(cp).x, cp.s, center(cp).z);
+    }
+    await wait(pause);
+    const fin = ps[ps.length - 1];
+    await tp(NAME, center(fin).x, fin.s + 0.5, center(fin).z);
+    await wait(2000);
+  }
+  const deltaColours = () => bot.raw.filter((r) => /Checkpoint \d\/\d/.test(r)).map((r) => ((r.match(/"color":"(#5fd068|#ff6b5b)"/i) || [])[1] || '').toLowerCase());
+  await teleportRun(course, 2600);
+  const pbLine = bot.chats.find((c) => /Neue Bestzeit|New personal best/.test(c));
+  const greens = deltaColours();
+  check('Schnellerer Lauf: Zwischenzeiten grün mit „−“, „Neue Bestzeit!“ mit Abstand', !!pbLine && greens.length === 3 &&
+    greens.every((g) => g === '#5fd068') && bot.chats.filter((c) => /Checkpoint \d\/3 .*\(−/.test(c)).length === 3,
+    `${pbLine} · ${greens.join(',')} · ${bot.raw.find((r) => /Checkpoint/.test(r))?.slice(0, 400)}`);
+  const pbMs = (() => {
+    const m = (pbLine || '').match(/(\d+):(\d\d)[,.](\d{3})/);
+    return m ? (Number(m[1]) * 60 + Number(m[2])) * 1000 + Number(m[3]) : 0;
+  })();
+  check('Medaille passt zur Zeit (Titel)', bot.titles.some((t) => {
+    const want = pbMs <= course.medals.gipfel ? /Gipfel|Summit/ : pbMs <= course.medals.gold ? /Gold/ : pbMs <= course.medals.silber ? /Silber|Silver/ : /Bronze/;
+    return want.test(t);
+  }), `${pbMs} ms · ${bot.titles.join(' | ')} · Grenzen ${JSON.stringify(course.medals)}`);
+  await teleportRun(course, 3600);
+  const reds = deltaColours();
+  const nopb = bot.chats.find((c) => /deine Bestzeit bleibt|your best stays/.test(c));
+  check('Langsamerer Lauf: Zwischenzeiten rot mit „+“, Bestzeit bleibt', !!nopb && reds.length === 3 && reds.every((g) => g === '#ff6b5b'),
+    `${nopb} · ${reds.join(',')}`);
+  const yml3 = fs.readFileSync(file, 'utf8');
+  check('Neue Bestzeit gespeichert', Number((yml3.match(/almwiese:\s*\n\s*best: (\d+)/) || [])[1] || 0) === pbMs, String(pbMs));
+
+  // ---------- Tafel im Basislager zeigt die Bestzeit ----------
+  bot.chat('/gipfel basislager');
+  await wait(3000);
+  const boards = Object.values(bot.entities).filter((e) => e.name === 'text_display')
+    .map((e) => (e.metadata || []).map((m) => (m && typeof m === 'object' ? plain(m) : '')).join(' '));
+  const board = boards.find((b) => /Almwiesen|Meadow/.test(b) && b.includes(NAME));
+  check('Bestenliste-Tafel im Basislager zeigt den Test-Spieler', !!board, (board || boards.find((b) => /Almwiesen|Meadow/.test(b)) || `${boards.length} Tafeln`).replace(/\n/g, ' ').slice(0, 160));
+
+  // ---------- Strecke der Woche: Stern → Start, Ziel → Wochen-Gipfel ----------
+  bot.chats.length = 0;
+  bot.setQuickBarSlot(4);
+  await wait(300);
+  bot.activateItem();
+  await wait(2500);
+  const wjson = (await rcon('gipfel woche'))[0];
+  const wid = ['almwiese', 'gletscher', 'kletterwand', 'felsgrat', 'seilbahn', 'eishoehle', 'gipfelkreuz', 'wetterturm'];
+  const wpads = {};
+  for (const id of wid) {
+    const j = (await rcon(`gipfel pads ${id}`))[0];
+    wpads[id] = JSON.parse(j.slice(j.indexOf('{')));
+  }
+  const weekly = Object.values(wpads).find((c) => onPad(bot.entity.position, c.pads[0], 0.6));
+  weeklyId = weekly?.id;
+  check('Stern „Strecke der Woche“ startet die Strecke der Woche', !!weekly && wjson.includes(weekly.name) , `${weekly?.id} · ${wjson.split('\n')[0]}`);
+  if (weekly) {
+    // Wochen-Lauf: Pausen nach Länge der Strecke, damit die Zeit glaubhaft ist
+    await teleportRun(weekly, Math.max(2600, Math.ceil(weekly.plausible / (weekly.pads.filter((p) => p.role === 'CHECKPOINT').length + 1)) + 800));
+    check('Strecke der Woche geschafft → „▲ Wochen-Gipfel!“ und Wochen-Platz', said(bot, /Wochen-Gipfel!|Weekly Summit!/) && said(bot, /Wochenbeste .*Platz 1|Weekly best .*rank 1/),
+      bot.chats.filter((c) => /Woche|week/i.test(c)).join(' | '));
+    const tab = bot.players[NAME]?.displayName ? plain(bot.players[NAME].displayName) : '';
+    await wait(6000);
+    const tab2 = bot.players[NAME]?.displayName ? plain(bot.players[NAME].displayName) : tab;
+    check('Abzeichen ▲ in der Tab-Liste', /▲/.test(tab2), tab2);
+    bot.chats.length = 0;
+    bot.chat('/gipfel woche');
+    await wait(1200);
+    check('/gipfel woche zeigt die Wochen-Bestenliste mit dem Test-Spieler', said(bot, new RegExp(`1\\. ${NAME}`)), bot.chats.join(' | ').slice(0, 200));
+  }
+  bot.chat('/gipfel basislager');
+  await wait(1500);
 
   // ---------- Kein Schaden, kein Hunger ----------
   await rcon(`damage ${NAME} 6`);

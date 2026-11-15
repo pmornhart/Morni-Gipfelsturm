@@ -263,7 +263,8 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
 
     /** Restzeit der Woche als Text („3 Tagen 4 Std.“). */
     public String weekLeft(String l) {
-        Duration left = Duration.between(Instant.now(), WeeklyRotation.nextChange(Instant.now()));
+        Instant now = now();
+        Duration left = Duration.between(now, WeeklyRotation.nextChange(now));
         long days = left.toDays();
         long hours = left.toHoursPart();
         if (days > 0) {
@@ -336,8 +337,18 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
     // Woche
     // =========================================================================================
 
+    /**
+     * Uhr für die Strecke der Woche. Nur für Tests lässt sie sich mit {@code -Dgipfelsturm.uhr-versatz=<ms>} verstellen
+     * (z. B. kurz vor Montag 0:00, um den Wechsel echt zu prüfen).
+     */
+    public static Instant now() {
+        return Instant.now().plusMillis(CLOCK_OFFSET);
+    }
+
+    private static final long CLOCK_OFFSET = Long.getLong("gipfelsturm.uhr-versatz", 0L);
+
     private void rollWeek() {
-        Instant now = Instant.now();
+        Instant now = now();
         List<Course> cs = model.courses();
         Course w = cs.get(WeeklyRotation.index(now, cs.size()));
         String id = WeeklyRotation.weekId(now);
@@ -453,7 +464,7 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
     // =========================================================================================
 
     private void everySecond() {
-        if (!WeeklyRotation.weekId(Instant.now()).equals(store.weekId())) {
+        if (!WeeklyRotation.weekId(now()).equals(store.weekId())) {
             rollWeek();
         }
         for (Player p : Bukkit.getOnlinePlayers()) {

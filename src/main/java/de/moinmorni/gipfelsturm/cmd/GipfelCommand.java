@@ -160,18 +160,37 @@ public final class GipfelCommand implements TabExecutor {
 
     /** Lage aller Pads als JSON (für Tests und zum Nachsehen). */
     private static String padsJson(Course c) {
-        StringBuilder b = new StringBuilder("{\"id\":\"").append(c.id).append("\",\"fall\":[");
+        StringBuilder b = new StringBuilder("{\"id\":\"").append(c.id).append("\",\"name\":\"").append(c.nameDe)
+                .append("\",\"fall\":[");
         for (int k = 0; k <= c.checkpointCount(); k++) {
             b.append(k > 0 ? "," : "").append(c.fallY(k));
         }
-        b.append("],\"plausible\":").append(c.plausibleMs()).append(",\"pads\":[");
+        b.append("],\"plausible\":").append(c.plausibleMs()).append(",\"difficulty\":\"").append(c.difficulty)
+                .append("\",\"medals\":{\"gipfel\":").append(c.medals.gipfel()).append(",\"gold\":")
+                .append(c.medals.gold()).append(",\"silber\":").append(c.medals.silber()).append(",\"bronze\":")
+                .append(c.medals.bronze()).append("},\"pads\":[");
         for (var p : c.pads) {
             b.append(p.index > 0 ? "," : "").append(String.format(Locale.ROOT,
                     "{\"i\":%d,\"role\":\"%s\",\"kind\":\"%s\",\"x0\":%d,\"x1\":%d,\"z0\":%d,\"z1\":%d,\"y\":%d,\"s\":%.4f,\"b\":\"%s\"}",
                     p.index, p.role, p.arrival == null ? "START" : p.arrival.kind(), p.x0, p.x1, p.z0, p.z1, p.y,
                     p.surface(), p.blk.id()));
+            if (p.arrival != null) {
+                b.setLength(b.length() - 1);
+                b.append(",\"dir\":\"").append(p.arrival.dir()).append("\",\"side\":").append(p.arrival.passSide())
+                        .append(",\"ladder\":").append(cells(p.arrival.ladder())).append(",\"wall\":")
+                        .append(cells(p.arrival.wall())).append('}');
+            }
         }
         return b.append("]}").toString();
+    }
+
+    private static String cells(List<long[]> cells) {
+        StringBuilder b = new StringBuilder("[");
+        for (long[] c : cells) {
+            b.append(b.length() > 1 ? "," : "").append('[').append(c[0]).append(',').append(c[1]).append(',')
+                    .append(c[2]).append(']');
+        }
+        return b.append(']').toString();
     }
 
     private void top(CommandSender sender, String l, Course c) {
