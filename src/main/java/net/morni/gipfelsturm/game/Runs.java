@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -285,19 +284,23 @@ public final class Runs {
 
     private void onTick() {
         tick++;
-        for (Iterator<Map.Entry<UUID, Run>> it = runs.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<UUID, Run> e = it.next();
-            Player p = Bukkit.getPlayer(e.getKey());
+        // Über eine Kopie: Ein Lauf kann mitten im Durchgang enden (Ziel, Rennen vorbei) und fällt dann aus der Liste.
+        for (UUID id : new ArrayList<>(runs.keySet())) {
+            Run r = runs.get(id);
+            if (r == null) {
+                continue;
+            }
+            Player p = Bukkit.getPlayer(id);
             if (p == null) {
-                it.remove();
+                runs.remove(id);
                 continue;
             }
             if (!p.getWorld().equals(pl.world())) {
-                it.remove();
-                reportFalls(p, e.getValue());
+                runs.remove(id);
+                reportFalls(p, r);
                 continue;
             }
-            update(p, e.getValue());
+            update(p, r);
         }
         for (Race race : new ArrayList<>(races)) {
             race(race);

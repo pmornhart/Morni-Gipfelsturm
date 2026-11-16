@@ -44,6 +44,7 @@ function rcon(...cmds) {
     const out = [];
     let current = '';
     let i = 0;
+    let listSent = false;
     const send = (id, type, body) => {
       const b = Buffer.from(body, 'utf8');
       const p = Buffer.alloc(14 + b.length);
@@ -60,8 +61,8 @@ function rcon(...cmds) {
         return;
       }
       current = '';
+      listSent = false;
       send(100 + i, 2, cmds[i]);
-      send(9999, 2, 'list');
     };
     sock.on('data', (d) => {
       buf = Buffer.concat([buf, d]);
@@ -79,10 +80,17 @@ function rcon(...cmds) {
           next();
         } else {
           current += body;
+          // „list“ erst jetzt: Der Server liest jedes Paket einzeln und beendet die Verbindung, wenn zwei auf einmal
+          // ankommen (Vanilla-RCON erwartet genau ein Paket pro read()).
+          if (!listSent) {
+            listSent = true;
+            send(9999, 2, 'list');
+          }
         }
       }
     });
     sock.on('error', reject);
+    sock.on('close', () => reject(new Error('RCON: Verbindung ohne Antwort beendet')));
     sock.on('connect', () => send(1, 3, PASS));
   });
 }
@@ -624,6 +632,12 @@ async function main() {
   await wait(500);
   process.exit(ok === results.length ? 0 : 1);
 }
+
+// Hängt etwas, ohne dass noch eine Verbindung offen ist, würde node still mit 0 enden – das wäre ein falsches Grün.
+process.on('beforeExit', () => {
+  console.error('Test endet unerwartet (nichts mehr offen) – gilt als Fehlschlag.');
+  process.exit(1);
+});
 
 main().catch((err) => {
   console.error(err);

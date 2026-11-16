@@ -38,6 +38,13 @@ Netzwerk (Schnittstelle `net.morni.api.MorniNet`) und ganz allein.
   MoinMorni) – Paket `net.morni.gipfelsturm`, Schnittstelle `net.morni.api.MorniNet` vom Netzwerk-Plugin „MorniNet“
   (`softdepend: [MorniNet]`), Brücke `net/Connected` (vorher nach dem alten Namen benannt), Plugin-Angaben und Texte
   mit morni.net. Plugin-Name, Datenordner `plugins/Gipfelsturm`, Welt und Strecken bleiben (kein Neubau).
+  Behoben dabei: `Runs.onTick` warf eine ConcurrentModificationException, wenn im Party-Rennen jemand ins Ziel kam,
+  während noch andere liefen (Lauf fiel mitten im Durchgang aus der Liste) – jetzt über eine Kopie. Test-Werkzeug:
+  Die RCON-Hilfe in `bot-test.cjs`/`course-test.cjs` schickte Befehl und „list“ auf einmal; Vanilla-RCON erwartet
+  genau ein Paket pro Lesen und trennte dann – das Versprechen hing und node endete still mit 0 (falsches Grün).
+  Jetzt „list“ erst nach der ersten Antwort, Verbindungsende ohne Antwort = Fehler, `beforeExit` = Fehlschlag.
+  Echt mit Paper 26.1.2: `bot-test.cjs` **45/45**, `--network` **58/58**, Server-Log ohne Fehler; 49 Unit-Tests,
+  Paper 26.1 übersetzt.
 - Version 0.1.0 (15.11. veröffentlicht, Release v0.1.0): alles aus der README.
 - 49 Unit-Tests grün (Sprung-Physik Tick für Tick, alle Strecken gegen die Sprung-Regeln, Medaillen, Bestenliste,
   Strecke der Woche inkl. Sommer-/Winterzeit, Zeitformat, Texte de/en).
