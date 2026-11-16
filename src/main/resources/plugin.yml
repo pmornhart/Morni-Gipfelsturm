@@ -1,12 +1,12 @@
 name: Gipfelsturm
 version: '${project.version}'
-main: de.moinmorni.gipfelsturm.GipfelsturmPlugin
+main: net.morni.gipfelsturm.GipfelsturmPlugin
 api-version: '1.21'
-description: Parkour-Strecken von leicht bis extrem, mit Bestzeiten und Strecke der Woche (MoinMorni).
-authors: [MoinMorni]
-website: https://moinmorni.net
-# Läuft im MoinMorni-Netzwerk (Sprache, Party, Statistik) und auch ganz allein.
-softdepend: [MoinMorni]
+description: Parkour-Strecken von leicht bis extrem, mit Bestzeiten und Strecke der Woche (morni.net).
+authors: [morni.net]
+website: https://morni.net
+# Läuft im Netzwerk morni.net (Sprache, Party, Statistik) und auch ganz allein.
+softdepend: [MorniNet]
 commands:
   gipfel:
     description: Gipfelsturm – Strecke wählen, Bestenliste, Statistik, Übungsmodus

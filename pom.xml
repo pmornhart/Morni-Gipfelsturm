@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Gipfelsturm: Parkour-Modus des MoinMorni-Netzwerks (Paper-Plugin). Läuft im Netzwerk und auch allein. -->
+<!-- Gipfelsturm: Parkour-Modus des Netzwerks morni.net (Paper-Plugin). Läuft im Netzwerk und auch allein. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>de.moinmorni</groupId>
+  <groupId>net.morni</groupId>
   <artifactId>morni-gipfelsturm</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <packaging>jar</packaging>
   <name>Gipfelsturm</name>
 
@@ -52,8 +52,8 @@
           <execution>
             <id>default-compile</id>
             <configuration>
-              <!-- Die Netzwerk-Schnittstelle (src/api, unveränderte Kopie aus moinmorni.net) wird nur zum Übersetzen
-                   gebraucht: Zur Laufzeit kommt sie aus dem Netzwerk-Plugin „MoinMorni“. -->
+              <!-- Die Netzwerk-Schnittstelle (src/api, unveränderte Kopie aus morni.net) wird nur zum Übersetzen
+                   gebraucht: Zur Laufzeit kommt sie aus dem Netzwerk-Plugin „MorniNet“. -->
               <compileSourceRoots>
                 <compileSourceRoot>${project.basedir}/src/main/java</compileSourceRoot>
                 <compileSourceRoot>${project.basedir}/src/api/java</compileSourceRoot>
@@ -74,7 +74,7 @@
         <configuration>
           <!-- Nie in die Jar: sonst gäbe es die Schnittstelle zweimal und der Dienst des Netzwerks würde nicht gefunden. -->
           <excludes>
-            <exclude>de/moinmorni/api/**</exclude>
+            <exclude>net/morni/api/**</exclude>
           </excludes>
         </configuration>
       </plugin>
