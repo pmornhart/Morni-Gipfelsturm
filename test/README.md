@@ -20,12 +20,12 @@ Wochen-Bestenliste), Mitspieler ausblenden, kein Schaden, Lobby ohne Netzwerk.
 
 ### Mit Fake-Netzwerk (`--network`)
 
-`fake-network/` ist ein kleines Plugin namens `MorniNet`, das die Schnittstelle `net.morni.api.MorniNet`
-bereitstellt und jeden Aufruf (`stats`, `state`, `toLobby`) in `plugins/MorniNet/calls.log` schreibt. Sprache und
+`fake-network/` ist ein kleines Plugin namens `MoinMorni`, das die Schnittstelle `de.moinmorni.api.MoinMorni`
+bereitstellt und jeden Aufruf (`stats`, `state`, `toLobby`) in `plugins/MoinMorni/calls.log` schreibt. Sprache und
 Party werden per `/fakenet lang <spieler> de|en` bzw. `/fakenet party <anführer> <mitglied…>` gesetzt.
 
 ```
-(cd test/fake-network && mvn package)   # → target/Fake-MorniNet.jar nach plugins/
+(cd test/fake-network && mvn package)   # → target/Fake-MoinMorni.jar nach plugins/
 node test/bot-test.cjs … --network
 ```
 

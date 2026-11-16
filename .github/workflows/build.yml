@@ -1,7 +1,7 @@
 name: Bauen
 
 # Bei jedem Push bauen und testen. Auf main zusätzlich ein Release mit der Jar (Tag v<Version aus der pom.xml>),
-# das morni.net automatisch auf den Gipfelsturm-Server spielt.
+# das MoinMorni automatisch auf den Gipfelsturm-Server spielt.
 on:
   push:
   pull_request:

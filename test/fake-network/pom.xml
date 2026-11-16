@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Nur für Tests: tut so, als wäre es das Netzwerk-Plugin „MorniNet“ (Dienst net.morni.api.MorniNet). -->
+<!-- Nur für Tests: tut so, als wäre es das MoinMorni-Netzwerk-Plugin (Dienst de.moinmorni.api.MoinMorni). -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>net.morni</groupId>
+  <groupId>de.moinmorni</groupId>
   <artifactId>fake-network</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
@@ -31,7 +31,7 @@
   </dependencies>
 
   <build>
-    <finalName>Fake-MorniNet</finalName>
+    <finalName>Fake-MoinMorni</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

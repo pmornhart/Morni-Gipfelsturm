@@ -300,7 +300,7 @@ async function main() {
   const start = pads[0];
   const finish = pads[pads.length - 1];
 
-  const calls = path.join(SERVER_DIR, 'plugins', 'MorniNet', 'calls.log');
+  const calls = path.join(SERVER_DIR, 'plugins', 'MoinMorni', 'calls.log');
   if (NETWORK) {
     // Fake-Netzwerk: Englisch für den Test-Spieler, Aufruf-Protokoll leeren
     if (fs.existsSync(calls)) fs.writeFileSync(calls, '');
