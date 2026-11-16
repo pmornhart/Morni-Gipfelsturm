@@ -78,6 +78,8 @@ if [ -f "$CFG" ]; then
 else
   printf 'rueckkehr-sekunden: %s\n' "$COMEBACK" > "$CFG"
 fi
+# frische Spielerdaten (Bestzeiten, Geister, „Mitspieler ausblenden“) – sonst bleibt der Stand eines abgebrochenen Laufs
+rm -rf "$SERVER/plugins/Gipfelsturm/spieler" "$SERVER/plugins/Gipfelsturm/geister"
 # nie zwei Fassungen im Server: alte Jars (auch unter früheren Namen) weg
 rm -f "$SERVER"/plugins/Morni-Gipfelsturm*.jar "$SERVER"/plugins/*Fake*.jar "$SERVER"/plugins/*fake*.jar
 cp "$REPO/target/Morni-Gipfelsturm.jar" "$SERVER/plugins/"
