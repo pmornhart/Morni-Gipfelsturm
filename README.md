@@ -2,7 +2,7 @@
 
 **Parkour-Strecken von leicht bis extrem, mit Bestzeiten und Strecke der Woche.**
 
-Gipfelsturm ist ein Spielmodus des Netzwerks [morni.net](https://morni.net): ein Paper-Plugin, das sich seine
+Gipfelsturm ist ein Spielmodus des [MoinMorni](https://moinmorni.net)-Netzwerks: ein Paper-Plugin, das sich seine
 eigene Welt aus dem Code baut – ein Basislager auf einer Bergschulter und acht Parkour-Strecken quer durch die Alpen.
 Es läuft im Netzwerk (Sprache, Party, Statistik) und genauso ganz allein auf einem einzelnen Server.
 
@@ -96,9 +96,9 @@ Die Welt entsteht direkt aus dem Bauplan, Chunk für Chunk, sobald jemand hinkom
 Strecken, wird die Welt beim Start gelöscht und neu erzeugt (Spieler bauen dort nichts). Spielerdaten liegen unter
 `plugins/Gipfelsturm/spieler/<uuid>.yml`, die Wege der Bestzeiten unter `geister/`.
 
-## Im Netzwerk morni.net
+## Im MoinMorni-Netzwerk
 
-Läuft das Netzwerk-Plugin `MorniNet`, nutzt Gipfelsturm dessen Schnittstelle (`net.morni.api.MorniNet`):
+Läuft das Netzwerk-Plugin `MoinMorni`, nutzt Gipfelsturm dessen Schnittstelle (`de.moinmorni.api.MoinMorni`):
 
 - **Sprache** jedes Spielers (Deutsch/Englisch, auch nach `/sprache`), sonst Deutsch.
 - **Statistik** (`stats("gipfelsturm", …)`): Zähler `attempts`, `falls`, `finishes`, `finishes_<strecke>` und getrennt die

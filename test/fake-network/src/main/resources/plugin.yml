@@ -1,8 +1,8 @@
-name: MorniNet
+name: MoinMorni
 version: 'fake'
-main: net.morni.fakenet.FakeNetwork
+main: de.moinmorni.fakenet.FakeNetwork
 api-version: '1.21'
-description: Nur für Tests – stellt die Schnittstelle von morni.net bereit und schreibt alle Aufrufe in calls.log.
+description: Nur für Tests – stellt die MoinMorni-Schnittstelle bereit und schreibt alle Aufrufe in calls.log.
 commands:
   fakenet:
     description: Fake-Netzwerk steuern (lang <spieler> de|en, party <anführer> <mitglied…>, clear)

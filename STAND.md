@@ -1,9 +1,9 @@
 # Stand – Gipfelsturm (Morni-Gipfelsturm)
 
-**Was es ist:** Der Parkour-Modus des Netzwerks morni.net (Paper-Plugin `Gipfelsturm`, Java 25, Paper 26.x). Baut seine
+**Was es ist:** Der Parkour-Modus des MoinMorni-Netzwerks (Paper-Plugin `Gipfelsturm`, Java 25, Paper 26.x). Baut seine
 eigene Welt aus dem Code – Basislager und acht eigene Alpen-Strecken von leicht bis extrem – mit Bestzeiten auf die
 Millisekunde, Zwischenzeiten, Medaillen, Bestenlisten, Strecke der Woche, Übungsmodus, Geist und Party-Rennen. Läuft im
-Netzwerk (Schnittstelle `net.morni.api.MorniNet`) und ganz allein.
+Netzwerk (Schnittstelle `de.moinmorni.api.MoinMorni`) und ganz allein.
 
 ## Aufbau
 
@@ -15,8 +15,8 @@ Netzwerk (Schnittstelle `net.morni.api.MorniNet`) und ganz allein.
 - `game/` – `Runs`/`Run` (Läufe, Zeit, Checkpoints, Stürze, Ziel, Geist), `Race`, `Hotbar`, `Controls`, `GameMenus`,
   `Boards`, `Guard`.
 - `stats/` – `Store`, `Leaderboard`, `PlayerRecord`, `WeeklyRotation`. `time/` – `RunClock`, `TimeFormat`, `Splits`.
-- `net/` – `Net`, `Connected` (einzige Klasse mit der Schnittstelle), `Standalone`. `ui/` – `Texts` (de/en), `Items`, `Menu`.
-- `src/api/java/net/morni/api/MorniNet.java` – unveränderte Kopie aus `pmornhart/morni.net` (nicht in der Jar).
+- `net/` – `Net`, `MoinMorniNet` (einzige Klasse mit der Schnittstelle), `Standalone`. `ui/` – `Texts` (de/en), `Items`, `Menu`.
+- `src/api/java/de/moinmorni/api/MoinMorni.java` – unveränderte Kopie aus `pmornhart/moinmorni.net` (nicht in der Jar).
 - `test/` – `bot-test.cjs`, `course-test.cjs`, `fake-network/` (Test-Netzwerk), siehe `test/README.md`.
 
 ## Strecken
@@ -34,17 +34,19 @@ Netzwerk (Schnittstelle `net.morni.api.MorniNet`) und ganz allein.
 
 ## Stand (16.11.2026)
 
-- Version 0.1.1 (16.11., Branch `claude/morni-net`, wartet auf Philips Go): **Umbenannt in morni.net** (vorher
-  MoinMorni) – Paket `net.morni.gipfelsturm`, Schnittstelle `net.morni.api.MorniNet` vom Netzwerk-Plugin „MorniNet“
-  (`softdepend: [MorniNet]`), Brücke `net/Connected` (vorher nach dem alten Namen benannt), Plugin-Angaben und Texte
-  mit morni.net. Plugin-Name, Datenordner `plugins/Gipfelsturm`, Welt und Strecken bleiben (kein Neubau).
-  Behoben dabei: `Runs.onTick` warf eine ConcurrentModificationException, wenn im Party-Rennen jemand ins Ziel kam,
-  während noch andere liefen (Lauf fiel mitten im Durchgang aus der Liste) – jetzt über eine Kopie. Test-Werkzeug:
-  Die RCON-Hilfe in `bot-test.cjs`/`course-test.cjs` schickte Befehl und „list“ auf einmal; Vanilla-RCON erwartet
-  genau ein Paket pro Lesen und trennte dann – das Versprechen hing und node endete still mit 0 (falsches Grün).
-  Jetzt „list“ erst nach der ersten Antwort, Verbindungsende ohne Antwort = Fehler, `beforeExit` = Fehlschlag.
-  Echt mit Paper 26.1.2: `bot-test.cjs` **45/45**, `--network` **58/58**, Server-Log ohne Fehler; 49 Unit-Tests,
-  Paper 26.1 übersetzt.
+- Version 0.1.2 (Branch `claude/moinmorni`, wartet auf Philips Go): **Name wieder MoinMorni** – 0.1.1 (16.11.
+  veröffentlicht) hatte Gipfelsturm kurz an einen neuen Netzwerk-Namen angepasst; der war nicht verfügbar, darum ist
+  der Code wieder wie in 0.1.0 (Umbenennung per `git revert` zurückgenommen): Paket `de.moinmorni.gipfelsturm`,
+  Schnittstelle `de.moinmorni.api.MoinMorni`, Netzwerk-Plugin „MoinMorni“, Brücke `net/MoinMorniNet`. Plugin-Name,
+  Datenordner `plugins/Gipfelsturm`, Welt und Strecken waren nie anders (kein Umzug, kein Neubau). Geprüft: 49
+  Unit-Tests, Paper 26.1 übersetzt, echt mit Paper 26.1.2: `bot-test.cjs` **45/45**, `--network` **58/58**
+  (Gipfelsturm meldet sich beim Test-Netzwerk „MoinMorni“), Server-Log ohne Fehler.
+- Version 0.1.1 (16.11. veröffentlicht): `Runs.onTick` warf eine ConcurrentModificationException, wenn im
+  Party-Rennen jemand ins Ziel kam, während noch andere liefen (Lauf fiel mitten im Durchgang aus der Liste) – jetzt
+  über eine Kopie. Test-Werkzeug: Die RCON-Hilfe in `bot-test.cjs`/`course-test.cjs` schickte Befehl und „list“ auf
+  einmal; Vanilla-RCON erwartet genau ein Paket pro Lesen und trennte dann – das Versprechen hing und node endete
+  still mit 0 (falsches Grün). Jetzt „list“ erst nach der ersten Antwort, Verbindungsende ohne Antwort = Fehler,
+  `beforeExit` = Fehlschlag. Beides bleibt in 0.1.2.
 - Version 0.1.0 (15.11. veröffentlicht, Release v0.1.0): alles aus der README.
 - 49 Unit-Tests grün (Sprung-Physik Tick für Tick, alle Strecken gegen die Sprung-Regeln, Medaillen, Bestenliste,
   Strecke der Woche inkl. Sommer-/Winterzeit, Zeitformat, Texte de/en).
@@ -69,7 +71,7 @@ Netzwerk (Schnittstelle `net.morni.api.MorniNet`) und ganz allein.
 
 ## Offen
 
-- Philip: Strecken im echten Client ansehen und laufen; Go für `main` (dann Release v0.1.1, das Netzwerk holt sich die
+- Philip: Strecken im echten Client ansehen und laufen; Go für `main` (dann Release v0.1.2, das Netzwerk holt sich die
   Jar von dort).
 - Nicht mit Test-Spielern geschafft (nur über Sprung-Regeln und `JumpPhysicsTest` geprüft): Neos, Schleim-Sprünge,
   Kopfstoß-Gänge der Eishöhle, die weitesten Sprint-Sprünge (Vierer, „3+1“) – die einfache Steuerung hält auf jedem Pad
