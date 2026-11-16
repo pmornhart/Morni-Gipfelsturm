@@ -44,4 +44,19 @@ public final class Standalone implements Net {
     public void toLobby(Player player) {
         player.kick(Texts.get("de", "lobby.kick"));
     }
+
+    @Override
+    public void askToLobby(Player player) {
+        toLobby(player);
+    }
+
+    @Override
+    public void playing(Player player, boolean playing) {
+        // niemand fragt nach
+    }
+
+    @Override
+    public void holdSlot(UUID player, int seconds) {
+        // ohne Netzwerk verbindet man sich direkt wieder mit diesem Server
+    }
 }

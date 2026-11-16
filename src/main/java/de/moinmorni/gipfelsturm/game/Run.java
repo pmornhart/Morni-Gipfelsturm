@@ -73,6 +73,16 @@ final class Run {
         path[pathLen++] = (float) z;
     }
 
+    /**
+     * Lücke im Weg füllen (Verbindung verloren): so viele Ticks den letzten Ort wiederholen, damit der Geist einer
+     * Bestzeit im Takt der Uhr bleibt.
+     */
+    void pad(long ticks) {
+        for (long i = 0; i < ticks && pathLen + 3 <= MAX_PATH; i++) {
+            record(px, py, pz);
+        }
+    }
+
     float[] path() {
         return Arrays.copyOf(path, pathLen);
     }

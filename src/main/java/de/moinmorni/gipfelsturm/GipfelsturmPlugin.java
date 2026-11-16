@@ -64,7 +64,12 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
         public boolean plausible = true;
         public int raceWait = 15;
         public boolean ghostDefault = true;
+        /** Zurück ins Spiel: so viele Sekunden bleibt ein Lauf nach einem Verbindungsabbruch frei (0 = aus). */
+        public int comeback = 90;
     }
+
+    /** Höchstens so lange bleibt ein Lauf nach einem Verbindungsabbruch frei. */
+    private static final int MAX_COMEBACK_SECONDS = 600;
 
     private static final String NO_COLLISION = "gipfel_nocoll";
     private static final Title.Times WELCOME = Title.Times.times(Duration.ofMillis(300), Duration.ofMillis(3500),
@@ -93,6 +98,7 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
         settings.plausible = getConfig().getBoolean("plausibel-pruefen", true);
         settings.raceWait = Math.max(5, getConfig().getInt("rennen-wartezeit", 15));
         settings.ghostDefault = getConfig().getBoolean("geist-standard", true);
+        settings.comeback = Math.max(0, Math.min(MAX_COMEBACK_SECONDS, getConfig().getInt("rueckkehr-sekunden", 90)));
         Items.init(this);
 
         model = World.create();
@@ -388,7 +394,11 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
         if (!p.getWorld().equals(world())) {
             p.teleport(spawn());
         }
-        hotbar.base(p);
+        // Zurück ins Spiel: Wartet ein Lauf noch auf diese Person, geht er am letzten Checkpoint weiter.
+        boolean back = runs.rejoin(p);
+        if (!back) {
+            hotbar.base(p);
+        }
         p.setCollidable(false);
         noCollision(p);
         visibility(p);
@@ -400,7 +410,7 @@ public final class GipfelsturmPlugin extends JavaPlugin implements Listener {
         holos.language(p);
         langSeen.put(p.getUniqueId(), lang(p));
         state();
-        if (!greet) {
+        if (!greet || back) {
             return;
         }
         // Kurz warten: Die Sprache kommt vom Netzwerk erst kurz nach dem Betreten.

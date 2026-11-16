@@ -23,6 +23,16 @@ const NETWORK = process.argv.includes('--network');
 const [HOST = '127.0.0.1', PORT = '25730', RCON = '127.0.0.1:25731', PASS_FILE = '.rcon-pass', SERVER_DIR = '.'] = args;
 const PASS = fs.readFileSync(PASS_FILE, 'utf8').trim();
 const NAME = NETWORK ? 'Gipfelnetz' : 'Gipfeltest';
+/** rueckkehr-sekunden des Test-Servers (Zurück ins Spiel), Vorgabe 90. */
+const COMEBACK = (() => {
+  try {
+    const cfg = fs.readFileSync(path.join(SERVER_DIR, 'plugins', 'Gipfelsturm', 'config.yml'), 'utf8');
+    const m = cfg.match(/^rueckkehr-sekunden:\s*(\d+)/m);
+    return m ? Number(m[1]) : 90;
+  } catch {
+    return 90;
+  }
+})();
 const VERSION = process.env.MC_VERSION || '26.1';
 let weeklyId = null;
 
@@ -306,8 +316,15 @@ async function main() {
     if (fs.existsSync(calls)) fs.writeFileSync(calls, '');
     await rcon('fakenet clear', `fakenet lang ${NAME} en`);
   }
-  const bot = makeBot(NAME);
+  let bot = makeBot(NAME);
   await spawned(bot);
+  /** Netzwerk-Aufrufe (nur mit Fake-Netzwerk), z. B. „holdSlot Gipfelnetz 20“. */
+  const netLines = () => (NETWORK && fs.existsSync(calls) ? fs.readFileSync(calls, 'utf8').split('\n').filter(Boolean) : []);
+  /** Uhr aus der Aktionsleiste (ms), -1 ohne Uhr. */
+  const clockOf = (b) => {
+    const m = (b.bars.filter((x) => x.includes('⏱')).pop() || '').match(/⏱ (\d+):(\d\d)[,.](\d{3})/);
+    return m ? (Number(m[1]) * 60 + Number(m[2])) * 1000 + Number(m[3]) : -1;
+  };
 
   // ---------- Basislager ----------
   const pos = bot.entity.position;
@@ -386,6 +403,40 @@ async function main() {
   check('Sturz unter die Fallgrenze → zurück zu Checkpoint 1',
     Math.abs(back.x - c1.x) < 0.8 && Math.abs(back.z - c1.z) < 0.8 && Math.abs(back.y - c1.y) < 0.6,
     `${back.x.toFixed(2)} ${back.y.toFixed(2)} ${back.z.toFixed(2)}; ${bot.bars.filter((b) => /Zurück|Back/.test(b))[0]}`);
+
+  // ---------- Zurück ins Spiel: Verbindung weg, rechtzeitig zurück → am letzten Checkpoint weiter, die Uhr lief weiter ----------
+  if (NETWORK) {
+    check('Netzwerk: Lauf läuft → „spielt gerade“', netLines().includes(`playing ${NAME} true`), netLines().filter((l) => l.startsWith('playing')).join(' | '));
+  }
+  bot.bars.length = 0;
+  await wait(1200);
+  const clockBefore = clockOf(bot);
+  let mark = netLines().length;
+  bot.quit();
+  await wait(4500);
+  if (NETWORK) {
+    check(`Netzwerk: Verbindung weg → Lauf bleibt ${COMEBACK} s frei (holdSlot)`, netLines().slice(mark).includes(`holdSlot ${NAME} ${COMEBACK}`),
+      netLines().slice(mark).join(' | '));
+  }
+  bot = makeBot(NAME);
+  await spawned(bot);
+  check('Zurück ins Spiel: „Willkommen zurück!“', bot.titles.some((t) => /Willkommen zurück|Welcome back/.test(t)) &&
+    said(bot, /Willkommen zurück! Dein Lauf geht am letzten Checkpoint weiter|Welcome back! Your run continues at the last checkpoint/),
+  `${bot.titles.join(' | ')} / ${bot.chats.slice(-2).join(' | ')}`);
+  const resumed = bot.entity.position;
+  check('… am letzten Checkpoint (1), mit der Leiste für unterwegs', onPad(resumed, cps[0], 0.6) &&
+    bot.inventory.slots[36]?.name === 'light_weighted_pressure_plate' && bot.inventory.slots[36 + 8]?.name === 'barrier',
+  `${resumed.x.toFixed(2)} ${resumed.y.toFixed(2)} ${resumed.z.toFixed(2)} · ${bot.inventory.slots[36]?.name}`);
+  bot.bars.length = 0;
+  await wait(1500);
+  const clockAfter = clockOf(bot);
+  check('Die Uhr ist weitergelaufen (die Zeit ohne Verbindung zählt mit)', clockBefore >= 0 && clockAfter > clockBefore + 4000,
+    `${clockBefore} → ${clockAfter} ms`);
+  if (NETWORK) {
+    check('Netzwerk: Angebot zurückgenommen (holdSlot 0) und wieder „spielt gerade“',
+      netLines().slice(mark).includes(`holdSlot ${NAME} 0`) && netLines().slice(mark).includes(`playing ${NAME} true`),
+      netLines().slice(mark).join(' | '));
+  }
 
   // ---------- Checkpoint auslassen geht nicht ----------
   bot.bars.length = 0;
@@ -555,6 +606,29 @@ async function main() {
     `${nopb} · ${reds.join(',')}`);
   const yml3 = fs.readFileSync(file, 'utf8');
   check('Neue Bestzeit gespeichert', Number((yml3.match(/almwiese:\s*\n\s*best: (\d+)/) || [])[1] || 0) === pbMs, String(pbMs));
+  if (NETWORK) {
+    check('Netzwerk: im Ziel spielt man nicht mehr', netLines().filter((l) => l.startsWith(`playing ${NAME} `)).pop() === `playing ${NAME} false`,
+      netLines().filter((l) => l.startsWith('playing')).slice(-2).join(' | '));
+  }
+
+  // ---------- Zu spät zurück: der Lauf ist vorbei wie bisher ----------
+  bot.chat('/gipfel start almwiese');
+  await wait(1500);
+  await tp(NAME, center(pads[1]).x, pads[1].s, center(pads[1]).z);
+  await wait(1500);
+  mark = netLines().length;
+  bot.quit();
+  await wait((COMEBACK + 5) * 1000);
+  bot = makeBot(NAME);
+  await spawned(bot);
+  const late = bot.entity.position;
+  check(`Zu spät zurück (nach ${COMEBACK} s): wie bisher im Basislager, der Lauf ist vorbei`, Math.abs(late.x - 0.5) < 1.5 &&
+    Math.abs(late.z - 10.5) < 1.5 && bot.inventory.slots[36]?.name === 'map' && !said(bot, /Willkommen zurück|Welcome back/),
+  `${late.x.toFixed(1)} ${late.y.toFixed(1)} ${late.z.toFixed(1)} · ${bot.inventory.slots[36]?.name}`);
+  if (NETWORK) {
+    check('Netzwerk: erst freigehalten, dann zurückgenommen (holdSlot … → 0)', netLines().slice(mark).includes(`holdSlot ${NAME} ${COMEBACK}`) &&
+      netLines().slice(mark).includes(`holdSlot ${NAME} 0`), netLines().slice(mark).join(' | '));
+  }
 
   // ---------- Tafel im Basislager zeigt die Bestzeit ----------
   bot.chat('/gipfel basislager');
@@ -615,8 +689,8 @@ async function main() {
   await wait(2500);
   if (NETWORK) {
     const log = fs.readFileSync(calls, 'utf8');
-    check('Lobby-Gegenstand → Netzwerk „toLobby“', log.includes(`toLobby ${NAME}`) && /in die Lobby/.test(bot.kickReason || ''),
-      bot.kickReason);
+    check('Lobby-Gegenstand → fragt das Netzwerk (im Basislager ohne Nachfrage)', log.includes(`askToLobby ${NAME} asked=false`) &&
+      /in die Lobby/.test(bot.kickReason || ''), bot.kickReason);
   } else {
     check('Lobby ohne Netzwerk: freundlicher Kick', /Danke fürs Klettern|Thanks for climbing/.test(bot.kickReason || ''),
       bot.kickReason);

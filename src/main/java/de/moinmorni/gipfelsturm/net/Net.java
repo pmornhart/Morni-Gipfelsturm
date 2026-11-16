@@ -41,6 +41,21 @@ public interface Net {
 
     void toLobby(Player player);
 
+    /**
+     * Der Spieler will selbst in die Lobby (Gegenstand, {@code /gipfel lobby}): Läuft gerade sein Lauf
+     * ({@link #playing}), fragt das Netzwerk erst nach. Ohne Netzwerk wie {@link #toLobby}.
+     */
+    void askToLobby(Player player);
+
+    /** Läuft gerade ein Lauf (Uhr läuft oder Party-Rennen)? Solange fragt „/lobby“ erst nach. Ohne Netzwerk: nichts. */
+    void playing(Player player, boolean playing);
+
+    /**
+     * Lauf nach einem Verbindungsabbruch so viele Sekunden freihalten – so lange bietet die Lobby „Zurück ins Spiel“
+     * an; {@code 0} nimmt das Angebot zurück. Ohne Netzwerk: nichts (man verbindet sich direkt wieder).
+     */
+    void holdSlot(UUID player, int seconds);
+
     /** Netzwerk finden; ohne Netzwerk-Plugin (oder wenn dessen Schnittstelle fehlt) allein. */
     static Net detect(JavaPlugin plugin) {
         Logger log = plugin.getLogger();
@@ -50,7 +65,7 @@ public interface Net {
         }
         try {
             // Eigene Klasse: Die Netzwerk-Schnittstelle wird erst hier geladen, nie ohne das Netzwerk-Plugin.
-            Net net = MoinMorniNet.create();
+            Net net = MoinMorniNet.create(log);
             if (net != null) {
                 log.info("Mit dem MoinMorni-Netzwerk verbunden.");
                 return net;
