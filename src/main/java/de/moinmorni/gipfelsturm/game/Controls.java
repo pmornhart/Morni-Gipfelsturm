@@ -68,7 +68,8 @@ public final class Controls implements Listener {
                 }
             }
             case Items.HIDE -> pl.toggleHide(p);
-            case Items.LOBBY -> pl.net().toLobby(p);
+            // Das Netzwerk fragt nach, falls gerade ein Lauf läuft (im Basislager geht es sofort).
+            case Items.LOBBY -> pl.net().askToLobby(p);
             case Items.CHECKPOINT -> pl.runs().toCheckpoint(p);
             case Items.RESTART -> pl.runs().restart(p);
             case Items.GIVEUP -> pl.runs().giveUp(p);

@@ -5,19 +5,29 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 
-/** Brücke zur Netzwerk-Schnittstelle {@link MoinMorni} – die einzige Klasse, die sie kennt. */
+/**
+ * Brücke zur Netzwerk-Schnittstelle {@link MoinMorni} – die einzige Klasse, die sie kennt.
+ *
+ * <p>Nachfrage vor der Lobby, „spielt gerade“ und „Platz freihalten“ gibt es erst ab Version 2 der Schnittstelle. Ein
+ * älteres Netzwerk-Plugin kennt sie nicht ({@link LinkageError}): dann geht „zur Lobby“ sofort und der Rest entfällt –
+ * alles andere läuft wie bisher.
+ */
 final class MoinMorniNet implements Net {
 
     private final MoinMorni api;
+    private final Logger log;
+    private volatile boolean olderNetwork;
 
-    private MoinMorniNet(MoinMorni api) {
+    private MoinMorniNet(MoinMorni api, Logger log) {
         this.api = api;
+        this.log = log;
     }
 
-    static Net create() {
-        return MoinMorni.get().map(MoinMorniNet::new).orElse(null);
+    static Net create(Logger log) {
+        return MoinMorni.get().map(a -> (Net) new MoinMorniNet(a, log)).orElse(null);
     }
 
     @Override
@@ -55,5 +65,51 @@ final class MoinMorniNet implements Net {
     @Override
     public void toLobby(Player player) {
         api.toLobby(player);
+    }
+
+    @Override
+    public void askToLobby(Player player) {
+        if (!olderNetwork) {
+            try {
+                api.askToLobby(player);
+                return;
+            } catch (LinkageError e) {
+                older(e);
+            }
+        }
+        api.toLobby(player);
+    }
+
+    @Override
+    public void playing(Player player, boolean playing) {
+        if (olderNetwork) {
+            return;
+        }
+        try {
+            api.playing(player, playing);
+        } catch (LinkageError e) {
+            older(e);
+        }
+    }
+
+    @Override
+    public void holdSlot(UUID player, int seconds) {
+        if (olderNetwork) {
+            return;
+        }
+        try {
+            api.holdSlot(player, seconds);
+        } catch (LinkageError e) {
+            older(e);
+        }
+    }
+
+    /** Älteres Netzwerk-Plugin (Schnittstelle 1): einmal melden, danach die neuen Methoden nicht mehr versuchen. */
+    private void older(LinkageError e) {
+        if (!olderNetwork) {
+            olderNetwork = true;
+            log.warning("Das Netzwerk-Plugin ist älter (" + e + "): keine Nachfrage vor der Lobby und kein „Zurück ins "
+                    + "Spiel“ – alles andere läuft wie bisher.");
+        }
     }
 }

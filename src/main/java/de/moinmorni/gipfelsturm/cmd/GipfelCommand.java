@@ -104,7 +104,7 @@ public final class GipfelCommand implements TabExecutor {
             }
             case "lobby" -> {
                 if (p != null) {
-                    pl.net().toLobby(p);
+                    pl.net().askToLobby(p);
                 }
             }
             case "reset" -> reset(sender, l, args);

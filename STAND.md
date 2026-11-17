@@ -34,6 +34,24 @@ Netzwerk (Schnittstelle `de.moinmorni.api.MoinMorni`) und ganz allein.
 
 ## Stand (16.11.2026)
 
+- Version 0.1.3 (Branch `claude/zurueck-ins-spiel`, wartet auf Philips Go): **Zurück ins Spiel** (Philip: „mitten im
+  Spiel nochmal fragen, ob man wirklich zur Lobby will; nach einem Absturz zurück ins Spiel“). Netzwerk-Schnittstelle 2
+  (byte-gleiche Kopie; `askToLobby`, `playing`, `holdSlot`; älteres Netzwerk-Plugin → `LinkageError` einmal im Log,
+  sonst wie bisher). `playing`, solange die Uhr eines Laufs läuft oder ein Party-Rennen ansteht; „Zurück ins Dorf“ und
+  `/gipfel lobby` rufen `askToLobby`. Verbindung mitten im Lauf weg → Lauf `rueckkehr-sekunden` frei (neu oben in der
+  config.yml, Vorgabe 90, 0 = aus; Fristen in `game/Comeback`), `holdSlot`; im Party-Rennen wartet das Rennen. Fair:
+  Rechtzeitig zurück geht es am letzten Checkpoint weiter wie nach einem Sturz (ohne ihn zu zählen), die Uhr ist
+  weitergelaufen, der Geist bekommt die Lücke aufgefüllt (`Run.pad`); noch ohne Checkpoint zurück an den Start (im
+  Rennen läuft die Uhr weiter, allein beginnt der Lauf neu). Zu spät: Lauf vorbei wie bisher (Stürze gemeldet, im Rennen
+  ausgestiegen). Neu `test/run.sh` (baut, richtet den Test-Server ein, frische Spielerdaten, `rueckkehr-sekunden: 20`,
+  `MEMORY`, erst allein, dann mit Fake-Netzwerk). JUnit 6.1.3. Geprüft: 53 Unit-Tests (neu `ComebackTest`), Paper 26.1
+  übersetzt, echt mit Paper 26.1.2: allein **49/49** (zweimal, vor und nach dem Neustart des Rechners), mit
+  Fake-Netzwerk **64/67** – alle neuen Prüfungen grün (spielt im Lauf, holdSlot 20, „Welcome back!“ am Checkpoint 1,
+  Uhr 5,9 s → 15,0 s weitergelaufen, holdSlot 0 und wieder „spielt“, im Ziel nicht mehr, zu spät zurück → Basislager,
+  holdSlot 20 → 0, Lobby-Gegenstand → `askToLobby` ohne Nachfrage im Basislager); die drei roten sind Zeit-Prüfungen
+  der echten Sprünge und Klicks auf dem stark ausgelasteten Rechner (Last ~20 auf 4 Kernen; allein liefen dieselben
+  Prüfungen grün), Log ohne Fehler.
+
 - Version 0.1.2 (Branch `claude/moinmorni`, wartet auf Philips Go): **Name wieder MoinMorni** – 0.1.1 (16.11.
   veröffentlicht) hatte Gipfelsturm kurz an einen neuen Netzwerk-Namen angepasst; der war nicht verfügbar, darum ist
   der Code wieder wie in 0.1.0 (Umbenennung per `git revert` zurückgenommen): Paket `de.moinmorni.gipfelsturm`,
@@ -71,8 +89,11 @@ Netzwerk (Schnittstelle `de.moinmorni.api.MoinMorni`) und ganz allein.
 
 ## Offen
 
-- Philip: Strecken im echten Client ansehen und laufen; Go für `main` (dann Release v0.1.2, das Netzwerk holt sich die
-  Jar von dort).
+- Philip: Strecken im echten Client ansehen und laufen; Go für `main` mit 0.1.3 (Zurück ins Spiel; das Netzwerk holt
+  sich die Jar von dort).
+- Netzwerk-Repo: Einstellungs-Katalog um `rueckkehr-sekunden` ergänzen (0–600, Vorgabe 90).
+- Nicht echt geprüft: Rückkehr über das echte Netzwerk (Lobby-Angebot „Zurück ins Spiel“), Rückkehr im Party-Rennen
+  (nur Code; das Rennen wartet, bis die Frist abläuft).
 - Nicht mit Test-Spielern geschafft (nur über Sprung-Regeln und `JumpPhysicsTest` geprüft): Neos, Schleim-Sprünge,
   Kopfstoß-Gänge der Eishöhle, die weitesten Sprint-Sprünge (Vierer, „3+1“) – die einfache Steuerung hält auf jedem Pad
   an und nimmt keinen Schwung mit.

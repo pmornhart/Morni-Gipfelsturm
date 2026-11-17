@@ -88,6 +88,13 @@ prüfen), `/gipfel pads <strecke>` (Lage aller Pads als JSON). Admins im Kreativ
 | `plausibel-pruefen` | `true` | Zeiten, die schneller sind als möglich (Teleport, Fliegen), nicht werten |
 | `rennen-wartezeit` | `15` | Sekunden zum Mitmachen beim Party-Rennen |
 | `geist-standard` | `true` | Geist für neue Spieler an |
+| `rueckkehr-sekunden` | `90` | Zurück ins Spiel: so lange bleibt ein Lauf nach einem Verbindungsabbruch frei (0 = aus, bis 600) |
+
+**Zurück ins Spiel:** Verliert jemand mitten in einem Lauf die Verbindung (zum Beispiel, weil das Spiel abstürzt),
+bleibt der Lauf `rueckkehr-sekunden` lang frei. Kommt er rechtzeitig wieder – direkt oder über „Zurück ins Spiel“ in
+der Lobby –, geht der Lauf am letzten Checkpoint weiter, wie nach einem Sturz (ohne ihn zu zählen). Die Uhr ist
+weitergelaufen, so bringt ein Abbruch nie Zeit oder Weg; im Party-Rennen wartet das Rennen so lange. Zu spät: Der Lauf
+ist vorbei wie bisher.
 
 Nur für Tests: `-Dgipfelsturm.uhr-versatz=<ms>` beim Start verstellt die Uhr der Strecke der Woche (um den Wechsel am
 Montag zu prüfen).
@@ -105,6 +112,9 @@ Läuft das Netzwerk-Plugin `MoinMorni`, nutzt Gipfelsturm dessen Schnittstelle (
   Bestzeit `time_<strecke>_ms` (kleiner ist besser). Lokal wird alles zusätzlich gespeichert.
 - **Zustand** (`state("gipfelsturm", "open", <spieler>)`) bei jeder Änderung und jede Minute.
 - **Party** für Rennen, **Lobby** für „Zurück ins Dorf“.
+- Ab Schnittstelle 2: Während eines Laufs „spielt“ man (dann fragt „/lobby“ und „Zurück ins Dorf“ erst nach), ein
+  freigehaltener Lauf erscheint in der Lobby als „Zurück ins Spiel“; mit einem älteren Netzwerk-Plugin läuft alles wie
+  bisher.
 
 Ohne Netzwerk: Deutsch, Statistik nur lokal, „Zurück ins Dorf“ verabschiedet freundlich (Neu verbinden).
 
@@ -154,7 +164,8 @@ NODE_PATH=<ordner>/node_modules node test/bot-test.cjs 127.0.0.1 <port> 127.0.0.
 ```
 
 Mit dem Fake-Netzwerk aus `test/fake-network/` zusätzlich Englisch, Statistik/Zustand ans „Netzwerk“ und ein
-Party-Rennen mit zwei Test-Spielern (`--network`). `test/course-test.cjs` läuft alle acht Strecken Pad für Pad mit
+Party-Rennen mit zwei Test-Spielern (`--network`). Alles auf einmal (bauen, Server einrichten, allein und mit
+Fake-Netzwerk, Zurück ins Spiel nach 20 Sekunden): `test/run.sh`. `test/course-test.cjs` läuft alle acht Strecken Pad für Pad mit
 echten Sprüngen, Leitern und Schleim ab. Mehr in `test/README.md`.
 
 ---

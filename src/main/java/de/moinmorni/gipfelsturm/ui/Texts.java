@@ -96,6 +96,19 @@ public final class Texts {
         t("run.giveup", "Aufgegeben – zurück im <white>Basislager</white>. Nächstes Mal klappt's!",
                 "Gave up – back at <white>base camp</white>. You'll get it next time!");
         t("run.left", "<gray>Lauf beendet.</gray>", "<gray>Run ended.</gray>");
+        // Zurück ins Spiel (Verbindung verloren, Lauf bleibt eine Weile frei)
+        t("back.title", "<green><bold>Willkommen zurück!</bold></green>", "<green><bold>Welcome back!</bold></green>");
+        t("back.sub", "<gray>Dein Lauf geht weiter</gray>", "<gray>Your run continues</gray>");
+        t("back.chat", "Willkommen zurück! Dein Lauf geht am letzten Checkpoint weiter <gray>(Checkpoint <n>) – die Uhr "
+                + "ist weitergelaufen.</gray>", "Welcome back! Your run continues at the last checkpoint <gray>(checkpoint "
+                + "<n>) – the clock kept running.</gray>");
+        t("back.chat.start", "Willkommen zurück! Du stehst wieder am Start <gray>– die Uhr ist weitergelaufen.</gray>",
+                "Welcome back! You're back at the start <gray>– the clock kept running.</gray>");
+        t("back.chat.fresh", "Willkommen zurück! Du stehst wieder am Start <gray>– die Uhr läuft los, sobald du startest.</gray>",
+                "Welcome back! You're back at the start <gray>– the clock starts as soon as you set off.</gray>");
+        t("race.away", "<yellow><player> hat die Verbindung verloren</yellow> <gray>– das Rennen wartet bis zu <sec> s.</gray>",
+                "<yellow><player> lost the connection</yellow> <gray>– the race waits up to <sec> s.</gray>");
+        t("race.back", "<green><player> ist zurück im Rennen!</green>", "<green><player> is back in the race!</green>");
 
         // ---------- Ziel ----------
         t("finish.title", "<gradient:#ffd23f:#ffffff><bold>Geschafft!</bold></gradient>",

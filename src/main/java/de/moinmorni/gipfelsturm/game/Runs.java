@@ -54,6 +54,12 @@ public final class Runs {
     private final Set<Race> races = new HashSet<>();
     private final Map<String, float[]> ghosts = new HashMap<>();
     private final Set<UUID> practice = new HashSet<>();
+    /** Zurück ins Spiel: wer mitten im Lauf die Verbindung verloren hat und zurückkommen darf (Frist in Ticks). */
+    private final Comeback comeback = new Comeback();
+    /** Ab welchem Tick jemand weg ist (für den Geist: die Lücke im Weg wird beim Wiederkommen aufgefüllt). */
+    private final Map<UUID, Long> awaySince = new HashMap<>();
+    /** Wem das Netzwerk gerade „spielt“ glaubt (nur Änderungen werden gemeldet). */
+    private final Set<UUID> told = new HashSet<>();
     private long tick;
 
     public Runs(GipfelsturmPlugin pl) {
@@ -223,6 +229,7 @@ public final class Runs {
     public void abandon(Player p) {
         UUID id = p.getUniqueId();
         Run r = runs.remove(id);
+        tellPlaying(p, false);
         if (r == null) {
             return;
         }
@@ -235,11 +242,105 @@ public final class Runs {
         pl.state();
     }
 
+    /**
+     * Verbindung weg. Läuft die Uhr, bleibt der Lauf {@code rueckkehr-sekunden} lang frei (so lange bietet die Lobby
+     * „Zurück ins Spiel“ an) und geht beim Wiederkommen am letzten Checkpoint weiter ({@link #rejoin}). Das ist fair: Die
+     * Uhr läuft weiter, und man steht dort, wo man auch nach einem Sturz stünde – ein Abbruch bringt nie Zeit oder Weg.
+     * Wer noch auf dem Start steht oder auf den Startschuss wartet, verliert nichts: dann wie bisher.
+     */
     public void quit(Player p) {
-        abandon(p);
-        Race inv = invites.remove(p.getUniqueId());
+        UUID id = p.getUniqueId();
+        // Das Netzwerk vergisst „spielt gerade“, sobald jemand den Server verlässt.
+        told.remove(id);
+        Race inv = invites.remove(id);
         if (inv != null) {
-            inv.invited.remove(p.getUniqueId());
+            inv.invited.remove(id);
+        }
+        Run r = runs.get(id);
+        int seconds = pl.settings().comeback;
+        if (r != null && Comeback.holds(seconds, r.state == Run.State.RUNNING, true, false)) {
+            comeback.away(id, tick, seconds);
+            awaySince.put(id, tick);
+            pl.net().holdSlot(id, seconds);
+            if (r.race != null) {
+                for (Player o : members(r.race)) {
+                    if (!o.equals(p)) {
+                        o.sendMessage(Texts.chat(pl.lang(o), "race.away", Texts.arg("player", p.getName()),
+                                Texts.arg("sec", seconds)));
+                    }
+                }
+            }
+            return;
+        }
+        abandon(p);
+    }
+
+    /**
+     * Wiederkommen: Wartet der Lauf noch, geht er am letzten Checkpoint weiter (wie nach einem Sturz, nur ohne den Sturz
+     * zu zählen; die Uhr ist weitergelaufen) – true. Zu spät: der Lauf ist vorbei wie bisher – false.
+     */
+    public boolean rejoin(Player p) {
+        UUID id = p.getUniqueId();
+        if (!comeback.waitingFor(id)) {
+            return false;
+        }
+        Run r = runs.get(id);
+        if (!comeback.back(id, tick) || r == null) {
+            expire(id);
+            return false;
+        }
+        Long since = awaySince.remove(id);
+        if (since != null && !r.practice && r.state == Run.State.RUNNING) {
+            r.pad(tick - since);
+        }
+        pl.net().holdSlot(id, 0);
+        pl.hotbar().run(p, r.practice);
+        respawn(p, r, false, null);
+        tellPlaying(p, r.state == Run.State.RUNNING || r.race != null);
+        String l = pl.lang(p);
+        p.showTitle(Title.title(Texts.get(l, "back.title"), Texts.get(l, "back.sub"), LONG));
+        // Noch kein Checkpoint: zurück am Start – im Rennen läuft die Uhr weiter, allein beginnt der Lauf neu.
+        String back = r.reached > 0 ? "back.chat" : r.state == Run.State.RUNNING ? "back.chat.start" : "back.chat.fresh";
+        p.sendMessage(Texts.chat(l, back, Texts.arg("n", r.reached)));
+        if (r.race != null) {
+            for (Player o : members(r.race)) {
+                if (!o.equals(p)) {
+                    o.sendMessage(Texts.chat(pl.lang(o), "race.back", Texts.arg("player", p.getName())));
+                }
+            }
+        }
+        pl.state();
+        return true;
+    }
+
+    /** Nicht rechtzeitig zurück: Der Lauf ist vorbei wie bisher (Stürze gemeldet, im Rennen ausgestiegen). */
+    private void expire(UUID id) {
+        pl.net().holdSlot(id, 0);
+        awaySince.remove(id);
+        Run r = runs.remove(id);
+        if (r == null) {
+            return;
+        }
+        if (r.falls > 0 && !r.practice) {
+            pl.net().stats(id, Map.of("falls", (long) r.falls), Map.of());
+        }
+        r.falls = 0;
+        if (r.race != null) {
+            r.race.out.add(id);
+            checkRaceOver(r.race);
+        }
+        pl.state();
+    }
+
+    /** Wartet gerade ein Lauf auf diese Person (Verbindung verloren, noch nicht zu spät)? */
+    public boolean waitingFor(UUID id) {
+        return comeback.waitingFor(id);
+    }
+
+    /** Dem Netzwerk sagen, ob gerade ein Lauf läuft (dann fragt „/lobby“ erst nach) – nur bei Änderungen. */
+    private void tellPlaying(Player p, boolean playing) {
+        if (playing ? told.add(p.getUniqueId()) : told.remove(p.getUniqueId())) {
+            pl.net().playing(p, playing);
         }
     }
 
@@ -284,6 +385,11 @@ public final class Runs {
 
     private void onTick() {
         tick++;
+        if (tick % 20 == 0 && comeback.count() > 0) {
+            for (UUID id : comeback.expired(tick)) {
+                expire(id);
+            }
+        }
         // Über eine Kopie: Ein Lauf kann mitten im Durchgang enden (Ziel, Rennen vorbei) und fällt dann aus der Liste.
         for (UUID id : new ArrayList<>(runs.keySet())) {
             Run r = runs.get(id);
@@ -292,15 +398,21 @@ public final class Runs {
             }
             Player p = Bukkit.getPlayer(id);
             if (p == null) {
-                runs.remove(id);
+                // Verbindung verloren, Lauf noch frei: er wartet (die Uhr läuft weiter).
+                if (!comeback.waitingFor(id)) {
+                    runs.remove(id);
+                }
                 continue;
             }
             if (!p.getWorld().equals(pl.world())) {
                 runs.remove(id);
                 reportFalls(p, r);
+                tellPlaying(p, false);
                 continue;
             }
             update(p, r);
+            Run now = runs.get(id);
+            tellPlaying(p, now != null && (now.state == Run.State.RUNNING || now.race != null));
         }
         for (Race race : new ArrayList<>(races)) {
             race(race);
